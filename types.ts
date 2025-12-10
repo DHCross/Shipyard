@@ -11,11 +11,24 @@ export interface ApiConfig {
   body: string;
 }
 
+export interface PathOption {
+  type: 'mason' | 'weaver' | 'oracle';
+  title: string;
+  description: string;
+  rationale: string;
+  command: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model' | 'system';
   content: string;
   image?: string; // Base64 image string for UI mockups
+  threePaths?: {
+    mason: PathOption;
+    weaver: PathOption;
+    oracle: PathOption;
+  };
   timestamp: number;
 }
 
@@ -41,11 +54,11 @@ export interface VirtualFile {
 }
 
 // Navigation Dashboard State
-export interface AstrolabeData {
+export interface AstrolabeState {
   phase: string;      // Current Coordinates (e.g., "Phase 1: Audit")
   horizon: string;    // The Goal (e.g., "Greenfield Scaffolding")
   bearing: string;    // The Immediate Next Step (e.g., "Create src/app/layout.tsx")
-  tasks?: string[];   // The Queue/Plan (Dropdown items)
+  tasks: { description: string; status: 'pending' | 'active' | 'complete' }[];   // The Queue/Plan
   status: 'calibrated' | 'drifting' | 'scanning';
 }
 

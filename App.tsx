@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Compass, Cpu, Activity, Info, FileText, Anchor } from 'lucide-react';
 import RequestPanel from './components/RequestPanel';
-import AnalysisPanel from './components/AnalysisPanel';
+import ProjectDashboard from './components/Dashboard/ProjectDashboard';
 import ResponseViewer from './components/ResponseViewer';
 import WorkspaceViewer from './components/WorkspaceViewer';
 import ManifestViewer from './components/ManifestViewer';
-import { ApiConfig, FetchedData, TabView, VirtualFile, ChatMessage, AstrolabeData } from './types';
+import { ApiConfig, FetchedData, TabView, VirtualFile, ChatMessage, AstrolabeState } from './types';
+import { TransmissionOverlay } from './components/Seance/TransmissionOverlay';
+import { CodemapViewer } from './components/Telemetry/CodemapViewer';
 
 const App: React.FC = () => {
   // Initialize with default, but try to load from localStorage on mount
@@ -42,7 +44,7 @@ const App: React.FC = () => {
   }, [apiConfig]);
 
   const [fetchedData, setFetchedData] = useState<FetchedData | null>(null);
-  
+
   // Pre-seed the workspace with the Constitutional Documents
   const [virtualFiles, setVirtualFiles] = useState<VirtualFile[]>([
     {
@@ -310,26 +312,32 @@ When you propose a feature in the new design, you must **Cite Your Source**.
 If it is not in the Old Repository, it does not belong in the New Vessel unless explicitly authorized. Dig first. Build second.`
     }
   ]);
-  
+
   // Astrolabe State (The Compass) - Lifted to App level for persistence
-  const [astrolabe, setAstrolabe] = useState<AstrolabeData>({
-    phase: "Phase 1: Audit & Initialization",
-    horizon: "Greenfield Vessel Construction",
-    bearing: "Awaiting Command",
-    tasks: ["Initialize Manifest", "Scaffold Core Directory"],
-    status: 'drifting'
+  const [astrolabe, setAstrolabe] = useState<AstrolabeState>({
+    phase: "Phase 1: Archeological Dig",
+    horizon: "Extract Raven Persona from WovenWebApp",
+    bearing: "Fetch lib/raven/persona-law.ts from old repo",
+    tasks: [
+      { description: "Read persona-law.ts from WovenWebApp", status: 'complete' },
+      { description: "Create PERSONA_CONSTITUTION.md in Drydock", status: 'complete' },
+      { description: "Extract astrology-mathbrain.js logic", status: 'pending' },
+      { description: "Scaffold Poetic Brain interface", status: 'pending' },
+      { description: "Integrate Perplexity validation layer", status: 'pending' }
+    ],
+    status: 'calibrated'
   });
 
   // Function to generate the Captain's Report based on the Manifest
   const generateCaptainReport = (files: VirtualFile[]) => {
     const manifest = files.find(f => f.path === 'VESSEL_MANIFEST.md');
     let summary = "The Shipwright is online.\n\nI have detected the 'Constitutional Documents' in the Drydock.\nMy role is to build the machine (The Vessel) that Raven (The Pilot) will fly.";
-    
+
     if (manifest) {
       // Very basic extraction of the last entry
       const lines = manifest.content.split('\n');
       let lastEntryIndex = -1;
-      
+
       // Find the last level 2 header
       for (let i = lines.length - 1; i >= 0; i--) {
         if (lines[i].startsWith('## [')) {
@@ -337,11 +345,11 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
           break;
         }
       }
-      
+
       if (lastEntryIndex !== -1) {
         const entryTitle = lines[lastEntryIndex].replace('## ', '');
         const phaseLine = lines.find((l, i) => i > lastEntryIndex && l.startsWith('**Phase:**')) || "**Phase:** Unknown";
-        
+
         summary = `**CAPTAIN'S REPORT**\n\n**Current Status:** Online & Synced\n**Latest Entry:** ${entryTitle}\n${phaseLine}\n\nThe Vessel Manifest is loaded. The Astrolabe is calibrated. I await your command to continue the build.`;
       }
     }
@@ -360,6 +368,15 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
 
   const [activeTab, setActiveTab] = useState<TabView>(TabView.MANIFEST); // Start on Manifest
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<'builder' | 'pilot'>('builder'); // New Mode State
+
+  // Separate Message History for Raven
+  const [ravenMessages, setRavenMessages] = useState<ChatMessage[]>([{
+    id: 'raven-intro',
+    role: 'model',
+    content: "The mirror is dark. I am waiting for a reflection.",
+    timestamp: Date.now()
+  }]);
 
   const handleCreateFile = (path: string, content: string) => {
     setVirtualFiles(prev => {
@@ -369,7 +386,7 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
     });
     // Auto-switch to workspace tab to show the creation (unless in Manifest view)
     if (activeTab !== TabView.MANIFEST) {
-       setActiveTab(TabView.WORKSPACE);
+      setActiveTab(TabView.WORKSPACE);
     }
   };
 
@@ -377,7 +394,7 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
   // This allows the AI to trigger a fetch with new settings immediately.
   const handleFetch = async (configOverride?: ApiConfig) => {
     const configToUse = configOverride || apiConfig;
-    
+
     // If an override was provided, update the UI state to match
     if (configOverride) {
       setApiConfig(configOverride);
@@ -391,9 +408,9 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
         // Sanitize headers to prevent "Invalid name" errors from whitespace
         const cleanKey = h.key ? h.key.trim() : '';
         const cleanValue = h.value ? h.value.trim() : '';
-        
+
         if (cleanKey && cleanValue) {
-           headersInit[cleanKey] = cleanValue;
+          headersInit[cleanKey] = cleanValue;
         }
       });
 
@@ -408,7 +425,7 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
 
       const response = await fetch(configToUse.url, options);
       const contentType = response.headers.get('content-type');
-      
+
       let data;
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
@@ -449,8 +466,42 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
     }
   };
 
+  // ---------------------------------------------------------
+  // PERISCOPE: File Sync with Local Filesystem
+  // ---------------------------------------------------------
+  useEffect(() => {
+    const pollFiles = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/files');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.files && Array.isArray(data.files) && data.files.length > 0) {
+            setVirtualFiles(prev => {
+              // Merge strategy: Create a map of existing files
+              const existingMap = new Map(prev.map(f => [f.path, f]));
+
+              // Update/Add files from disk
+              data.files.forEach((f: VirtualFile) => {
+                existingMap.set(f.path, f);
+              });
+
+              return Array.from(existingMap.values());
+            });
+          }
+        }
+      } catch (e) {
+        // Silently fail if bridge is down (expected in pure browser mode)
+      }
+    };
+
+    const interval = setInterval(pollFiles, 5000); // Poll every 5 seconds
+    pollFiles(); // Initial fetch
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
+      <TransmissionOverlay />
       {/* Header */}
       <header className="h-16 border-b border-slate-800 bg-slate-900/50 flex items-center px-6 justify-between backdrop-blur-md z-10">
         <div className="flex items-center space-x-3">
@@ -458,10 +509,10 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
             <Anchor className="w-5 h-5 text-indigo-400" />
           </div>
           <div>
-             <h1 className="text-lg font-bold text-slate-100 tracking-wide">
-               Woven Map <span className="text-indigo-400">Shipyard</span>
-             </h1>
-             <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Greenfield Console</div>
+            <h1 className="text-lg font-bold text-slate-100 tracking-wide">
+              Woven Map <span className="text-indigo-400">Shipyard</span>
+            </h1>
+            <div className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Greenfield Console</div>
           </div>
         </div>
         <div className="flex items-center space-x-4 text-sm text-slate-400">
@@ -474,47 +525,43 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
 
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden">
-        
+
         {/* Left Column: External API Control */}
-        <div className="w-1/2 flex flex-col border-r border-slate-800 bg-slate-900/30">
+        <div className="flex flex-col border-r border-slate-800 bg-slate-900/30" style={{ width: '35%' }}>
           <div className="flex border-b border-slate-800">
             <button
               onClick={() => setActiveTab(TabView.CONFIG)}
-              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
-                activeTab === TabView.CONFIG
-                  ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-500'
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-              }`}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === TabView.CONFIG
+                ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-500'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+                }`}
             >
               SENSOR ARRAY
             </button>
             <button
               onClick={() => setActiveTab(TabView.RESPONSE)}
-              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
-                activeTab === TabView.RESPONSE
-                  ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-500'
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-              }`}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === TabView.RESPONSE
+                ? 'bg-slate-800 text-indigo-400 border-b-2 border-indigo-500'
+                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+                }`}
             >
               TELEMETRY
             </button>
             <button
               onClick={() => setActiveTab(TabView.WORKSPACE)}
-              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
-                activeTab === TabView.WORKSPACE
-                  ? 'bg-slate-800 text-emerald-400 border-b-2 border-emerald-500'
-                  : 'text-slate-500 hover:text-emerald-300 hover:bg-emerald-900/10'
-              }`}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === TabView.WORKSPACE
+                ? 'bg-slate-800 text-emerald-400 border-b-2 border-emerald-500'
+                : 'text-slate-500 hover:text-emerald-300 hover:bg-emerald-900/10'
+                }`}
             >
               THE DRYDOCK
             </button>
             <button
               onClick={() => setActiveTab(TabView.MANIFEST)}
-              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${
-                activeTab === TabView.MANIFEST
-                  ? 'bg-slate-800 text-amber-400 border-b-2 border-amber-500'
-                  : 'text-slate-500 hover:text-amber-300 hover:bg-amber-900/10'
-              }`}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === TabView.MANIFEST
+                ? 'bg-slate-800 text-amber-400 border-b-2 border-amber-500'
+                : 'text-slate-500 hover:text-amber-300 hover:bg-amber-900/10'
+                }`}
             >
               CAPTAIN'S LOG
             </button>
@@ -522,18 +569,28 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
 
           <div className="flex-1 overflow-auto p-6 scrollbar-hide">
             {activeTab === TabView.CONFIG && (
-              <RequestPanel 
-                config={apiConfig} 
-                onChange={setApiConfig} 
+              <RequestPanel
+                config={apiConfig}
+                onChange={setApiConfig}
                 onFetch={() => handleFetch()}
                 isLoading={isLoading}
               />
             )}
             {activeTab === TabView.RESPONSE && (
-              <ResponseViewer data={fetchedData} files={virtualFiles} />
+              <CodemapViewer
+                files={virtualFiles}
+                onFileSelect={(path) => {
+                  // Switch to Workspace and highlight the file
+                  setActiveTab(TabView.WORKSPACE);
+                  // Could add scroll-to-file logic here later
+                }}
+              />
             )}
             {activeTab === TabView.WORKSPACE && (
-              <WorkspaceViewer files={virtualFiles} />
+              <WorkspaceViewer
+                files={virtualFiles}
+                onUpdateFile={handleCreateFile}
+              />
             )}
             {activeTab === TabView.MANIFEST && (
               <ManifestViewer files={virtualFiles} messages={messages} />
@@ -541,36 +598,17 @@ If it is not in the Old Repository, it does not belong in the New Vessel unless 
           </div>
         </div>
 
-        {/* Right Column: Gemini Analysis */}
-        <div className="w-1/2 flex flex-col bg-slate-950">
-          <div className="h-12 border-b border-slate-800 flex items-center px-6 bg-slate-900/30">
-            <Cpu className="w-4 h-4 text-indigo-400 mr-2" />
-            <span className="text-sm font-medium text-slate-300">Gemini 3.0 Pro (Architect)</span>
-            {fetchedData && (
-              <span className="ml-auto text-xs bg-indigo-900/50 text-indigo-300 px-2 py-1 rounded border border-indigo-500/30">
-                Context Loaded
-              </span>
-            )}
-          </div>
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <AnalysisPanel 
-              fetchedData={fetchedData} 
-              onConfigChange={setApiConfig}
-              onTriggerFetch={handleFetch}
-              onCreateFile={handleCreateFile}
-              externalInput={undefined}
-              onInputChange={undefined}
-              virtualFiles={virtualFiles}
-              messages={messages}
-              setMessages={setMessages}
-              astrolabe={astrolabe}
-              setAstrolabe={setAstrolabe}
-            />
-          </div>
+        {/* Right Column: Signal Deck (Project Dashboard) */}
+        <div className="flex flex-col bg-slate-950 border-l border-slate-800" style={{ width: '65%' }}>
+          <ProjectDashboard
+            astrolabe={astrolabe}
+            messages={messages}
+            virtualFiles={virtualFiles}
+          />
         </div>
 
-      </main>
-    </div>
+      </main >
+    </div >
   );
 };
 
