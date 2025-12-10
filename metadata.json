@@ -1,0 +1,5 @@
+{
+  "name": "Woven Map Shipyard",
+  "description": "The architectural console for building the Woven Map Greenfield Vessel. Integrates Gemini 3.0 Pro Architect with Astrology and Perplexity sensors.",
+  "requestFramePermissions": []
+}
