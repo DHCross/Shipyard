@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FetchedData, GithubTreeResponse, VirtualFile } from '../types';
+import { FetchedData, GithubTreeResponse, VirtualFile } from '@/types';
 import { AlertCircle, Clock, Database, Code2, FileJson, ArrowRight, Cpu, Globe, Zap, Eye, Activity, Map } from 'lucide-react';
 import CodeMapVisualizer from './CodeMapVisualizer';
 

@@ -12,7 +12,7 @@ import ReactFlow, {
     NodeProps,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { VirtualFile } from '../../types';
+import { VirtualFile } from '@/types';
 import { FileCode, FileText, FileJson, Folder, Cog } from 'lucide-react';
 
 interface CodemapViewerProps {

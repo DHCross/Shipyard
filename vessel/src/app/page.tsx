@@ -39,6 +39,14 @@ export default function Home() {
         <span>LON: 0.00</span>
       </div>
 
+      {/* The Door (Bottom Right) */}
+      <div className="absolute bottom-8 right-8 z-50">
+        <a href="/bridge" className="text-[10px] font-mono text-slate-800 hover:text-indigo-400 transition-colors cursor-pointer uppercase tracking-widest flex items-center gap-2 group">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-500">Enter Shipyard</span>
+          <span className="border border-slate-800 rounded px-1 group-hover:border-indigo-500">KEY</span>
+        </a>
+      </div>
+
     </main>
   );
 }

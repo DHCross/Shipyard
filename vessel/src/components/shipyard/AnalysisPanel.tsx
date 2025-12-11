@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, FunctionDeclaration, Type, Content } from '@google/genai';
-import { FetchedData, ChatMessage, ApiConfig, AstrolabeData, VirtualFile, PathOption } from '../types';
+import { FetchedData, ChatMessage, ApiConfig, AstrolabeData, VirtualFile, PathOption } from '@/types';
 import { Send, Bot, User, Sparkles, Terminal, Wrench, Image as ImageIcon, Download, Compass, Map as MapIcon, Anchor, RefreshCw, PlayCircle, Paperclip, ChevronDown } from 'lucide-react';
 import { ThreePathsCard } from './Planning/ThreePathsCard';
 

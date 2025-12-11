@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { VirtualFile } from '../types';
+import { VirtualFile } from '@/types';
 import { FileText, Clock, Copy, Check, Download, Package, FolderTree, Pencil, Eye, Save } from 'lucide-react';
 import JSZip from 'jszip';
 import CodeMapVisualizer from './CodeMapVisualizer';

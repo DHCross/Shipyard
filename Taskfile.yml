@@ -12,7 +12,7 @@ tasks:
   dev:
     desc: Start the Shipyard Development Server (Pilot Mode + Signal Bridge)
     cmds:
-      - npm run dev & cd vessel && npm run dev & node server/relay.js
+      - cd vessel && npm run dev
     interactive: true
 
   install:

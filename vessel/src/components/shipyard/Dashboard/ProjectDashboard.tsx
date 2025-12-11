@@ -10,7 +10,7 @@ import {
     Terminal,
     Clock
 } from 'lucide-react';
-import { ChatMessage, AstrolabeState } from '../../types';
+import { ChatMessage, AstrolabeState } from '@/types';
 
 interface ProjectDashboardProps {
     astrolabe: AstrolabeState;

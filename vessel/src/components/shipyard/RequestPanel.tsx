@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ApiConfig, HeaderItem } from '../types';
+import { ApiConfig, HeaderItem } from '@/types';
 import { Plus, Trash2, Play, Search, Zap, Key, Github, ArrowRight, Sparkles, Send } from 'lucide-react';
 
 interface RequestPanelProps {

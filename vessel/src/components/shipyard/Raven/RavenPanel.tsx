@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, Sparkles, Feather, Moon, Sun, Map as MapIcon } from 'lucide-react';
 import { GoogleGenAI, Content } from '@google/genai';
-import { ChatMessage, ApiConfig } from '../../types';
+import { ChatMessage, ApiConfig } from '@/types';
 import { HandshakeManager } from './HandshakeManager';
 import { AstrologyService } from '../../services/AstrologyService';
 

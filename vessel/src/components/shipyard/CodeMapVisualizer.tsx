@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { GithubTreeItem, VirtualFile } from '../types';
+import { GithubTreeItem, VirtualFile } from '@/types';
 import { Folder, FolderOpen, FileCode, FileJson, FileText, FileImage, File, ChevronRight, ChevronDown, Package } from 'lucide-react';
 
 interface CodeMapVisualizerProps {

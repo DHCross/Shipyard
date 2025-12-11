@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { VirtualFile, ChatMessage } from '../types';
+import { VirtualFile, ChatMessage } from '@/types';
 import { Scroll, Download, Activity, BookOpen, MessageSquare, FileText, Clock } from 'lucide-react';
 
 interface ManifestViewerProps {

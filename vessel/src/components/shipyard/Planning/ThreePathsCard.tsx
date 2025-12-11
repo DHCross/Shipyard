@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pickaxe, Palette, Eye, ArrowRight, Play } from 'lucide-react';
-import { PathOption } from '../../types';
+import { PathOption } from '@/types';
 
 interface ThreePathsCardProps {
     options: {
