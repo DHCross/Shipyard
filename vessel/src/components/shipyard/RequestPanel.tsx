@@ -39,10 +39,10 @@ const PRESETS: Record<string, ApiConfig> = {
     }, null, 2)
   },
   perplexity: {
-    url: 'https://api.perplexity.ai/chat/completions',
+    url: '/api/oracle',
     method: 'POST',
     headers: [
-      { key: 'Authorization', value: 'Bearer YOUR_KEY_HERE', id: 'auth' },
+      { key: 'x-perplexity-key', value: 'YOUR_KEY_HERE', id: 'auth' },
       { key: 'Content-Type', value: 'application/json', id: 'content-type' }
     ],
     body: JSON.stringify({
@@ -50,11 +50,11 @@ const PRESETS: Record<string, ApiConfig> = {
       "messages": [
         {
           "role": "system",
-          "content": "Be precise and concise."
+          "content": "You are the Shipyard Oracle. Precise. Geometric."
         },
         {
           "role": "user",
-          "content": "Find the latest news on SpaceX starship."
+          "content": "What is the current phase of the moon?"
         }
       ]
     }, null, 2)
@@ -63,7 +63,7 @@ const PRESETS: Record<string, ApiConfig> = {
 
 const RequestPanel: React.FC<RequestPanelProps> = ({ config, onChange, onFetch, isLoading }) => {
   const [githubPasteUrl, setGithubPasteUrl] = useState('');
-  
+
   const updateField = (field: keyof ApiConfig, value: any) => {
     onChange({ ...config, [field]: value });
   };
@@ -79,7 +79,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({ config, onChange, onFetch, 
   };
 
   const updateHeader = (id: string, field: 'key' | 'value', value: string) => {
-    const newHeaders = config.headers.map(h => 
+    const newHeaders = config.headers.map(h =>
       h.id === id ? { ...h, [field]: value } : h
     );
     updateField('headers', newHeaders);
@@ -88,7 +88,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({ config, onChange, onFetch, 
   const loadPreset = (key: string) => {
     if (PRESETS[key]) {
       const template = PRESETS[key];
-      const newHeaders = template.headers.map(h => ({...h, id: Math.random().toString(36).substr(2, 9)}));
+      const newHeaders = template.headers.map(h => ({ ...h, id: Math.random().toString(36).substr(2, 9) }));
       onChange({
         ...template,
         headers: newHeaders
@@ -102,16 +102,16 @@ const RequestPanel: React.FC<RequestPanelProps> = ({ config, onChange, onFetch, 
       // Supported: https://github.com/Owner/Repo
       // Supported: https://github.com/Owner/Repo/tree/branch-name
       // Supported: https://github.com/Owner/Repo/tree/feature/branch-name
-      
+
       const cleanUrl = githubPasteUrl.trim().replace(/\/$/, '');
       const urlStr = cleanUrl.startsWith('http') ? cleanUrl : `https://${cleanUrl}`;
       const urlObj = new URL(urlStr);
-      
+
       if (urlObj.hostname !== 'github.com') return;
 
       const pathParts = urlObj.pathname.split('/').filter(Boolean);
       // Expected: [owner, repo, "tree"?, branch_part1, branch_part2...]
-      
+
       if (pathParts.length >= 2) {
         const owner = pathParts[0];
         const repo = pathParts[1];
@@ -127,11 +127,11 @@ const RequestPanel: React.FC<RequestPanelProps> = ({ config, onChange, onFetch, 
           url: `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`,
           method: 'GET',
           headers: [
-             { key: 'Accept', value: 'application/vnd.github.v3+json', id: 'gh-accept-' + Date.now() }
+            { key: 'Accept', value: 'application/vnd.github.v3+json', id: 'gh-accept-' + Date.now() }
           ],
           body: ''
         });
-        setGithubPasteUrl(''); 
+        setGithubPasteUrl('');
       }
     } catch (e) {
       console.error("Invalid GitHub URL format", e);
@@ -145,7 +145,7 @@ Method: ${config.method}
 Headers: ${config.headers.map(h => `${h.key}: ${h.value}`).join(', ')}
 
 Please analyze this configuration and integrate it into the 'New Vessel' architecture. This is a critical sensor input for the Ship.`;
-    
+
     // Dispatch a custom event that App.tsx or AnalysisPanel might listen to
     const event = new CustomEvent('inject-prompt', { detail: prompt });
     window.dispatchEvent(event);
@@ -153,61 +153,61 @@ Please analyze this configuration and integrate it into the 'New Vessel' archite
 
   return (
     <div className="space-y-6">
-      
+
       {/* Intro Card */}
       <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
         <h3 className="text-indigo-400 font-semibold mb-2 flex items-center text-xs uppercase tracking-wider">
           <Zap className="w-4 h-4 mr-2" /> Connect Sensor Array
         </h3>
         <div className="grid grid-cols-2 gap-2 mb-4">
-           <button 
-             onClick={() => loadPreset('astrology')}
-             className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-200 border border-slate-600 transition-colors text-left truncate flex items-center"
-           >
-             <Sparkles className="w-3 h-3 mr-2 text-amber-400" /> Astrology API
-           </button>
-           <button 
-             onClick={() => loadPreset('perplexity')}
-             className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-200 border border-slate-600 transition-colors text-left truncate flex items-center"
-           >
-             <Zap className="w-3 h-3 mr-2 text-indigo-400" /> Perplexity AI
-           </button>
-           <button 
-             onClick={() => loadPreset('github')}
-             className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-200 border border-slate-600 transition-colors text-left truncate"
-           >
-             <Github className="w-3 h-3 inline mr-2"/> GitHub Repo
-           </button>
-           <button 
-             onClick={() => loadPreset('custom')}
-             className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-200 border border-slate-600 transition-colors text-left truncate"
-           >
-             🛠️ Reset / Custom
-           </button>
+          <button
+            onClick={() => loadPreset('astrology')}
+            className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-200 border border-slate-600 transition-colors text-left truncate flex items-center"
+          >
+            <Sparkles className="w-3 h-3 mr-2 text-amber-400" /> Astrology API
+          </button>
+          <button
+            onClick={() => loadPreset('perplexity')}
+            className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-200 border border-slate-600 transition-colors text-left truncate flex items-center"
+          >
+            <Zap className="w-3 h-3 mr-2 text-indigo-400" /> Perplexity AI
+          </button>
+          <button
+            onClick={() => loadPreset('github')}
+            className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-200 border border-slate-600 transition-colors text-left truncate"
+          >
+            <Github className="w-3 h-3 inline mr-2" /> GitHub Repo
+          </button>
+          <button
+            onClick={() => loadPreset('custom')}
+            className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-medium text-slate-200 border border-slate-600 transition-colors text-left truncate"
+          >
+            🛠️ Reset / Custom
+          </button>
         </div>
 
         {/* GitHub Converter Helper */}
         <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-           <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">
-             Convert Repository to API Signal
-           </label>
-           <div className="flex space-x-2">
-             <input 
-               type="text" 
-               placeholder="https://github.com/owner/repo"
-               value={githubPasteUrl}
-               onChange={(e) => setGithubPasteUrl(e.target.value)}
-               className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder-slate-600"
-             />
-             <button 
-               onClick={handleGithubConvert}
-               disabled={!githubPasteUrl.includes('github.com')}
-               className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-               title="Convert to API Endpoint"
-             >
-               <ArrowRight className="w-4 h-4" />
-             </button>
-           </div>
+          <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">
+            Convert Repository to API Signal
+          </label>
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              placeholder="https://github.com/owner/repo"
+              value={githubPasteUrl}
+              onChange={(e) => setGithubPasteUrl(e.target.value)}
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 placeholder-slate-600"
+            />
+            <button
+              onClick={handleGithubConvert}
+              disabled={!githubPasteUrl.includes('github.com')}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Convert to API Endpoint"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -215,7 +215,7 @@ Please analyze this configuration and integrate it into the 'New Vessel' archite
       <div className="space-y-2">
         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Signal Source (Endpoint)</label>
         <div className="flex space-x-0">
-          <select 
+          <select
             value={config.method}
             onChange={(e) => updateField('method', e.target.value)}
             className="bg-slate-800 border-y border-l border-slate-700 rounded-l-lg px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-indigo-500 appearance-none"
@@ -225,8 +225,8 @@ Please analyze this configuration and integrate it into the 'New Vessel' archite
             <option value="PUT">PUT</option>
             <option value="DELETE">DELETE</option>
           </select>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={config.url}
             onChange={(e) => updateField('url', e.target.value)}
             placeholder="https://api.example.com/v1/data"
@@ -239,25 +239,25 @@ Please analyze this configuration and integrate it into the 'New Vessel' archite
       <div className="space-y-2">
         <div className="flex justify-between items-center">
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center">
-            Authentication Keys (Headers) <Key className="w-3 h-3 ml-1 opacity-50"/>
+            Authentication Keys (Headers) <Key className="w-3 h-3 ml-1 opacity-50" />
           </label>
           <button onClick={addHeader} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center">
             <Plus className="w-3 h-3 mr-1" /> Add Key
           </button>
         </div>
-        
+
         <div className="space-y-2">
           {config.headers.map((header) => (
             <div key={header.id} className="flex space-x-2 group">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Key Name"
                 value={header.key}
                 onChange={(e) => updateHeader(header.id, 'key', e.target.value)}
                 className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
               />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Key Value"
                 value={header.value}
                 onChange={(e) => updateHeader(header.id, 'value', e.target.value)}
@@ -275,7 +275,7 @@ Please analyze this configuration and integrate it into the 'New Vessel' archite
       {['POST', 'PUT', 'PATCH'].includes(config.method) && (
         <div className="space-y-2">
           <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Payload (JSON)</label>
-          <textarea 
+          <textarea
             value={config.body}
             onChange={(e) => updateField('body', e.target.value)}
             className="w-full h-48 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500"
@@ -286,14 +286,13 @@ Please analyze this configuration and integrate it into the 'New Vessel' archite
 
       {/* Actions */}
       <div className="space-y-3 pt-2">
-        <button 
+        <button
           onClick={onFetch}
           disabled={isLoading}
-          className={`w-full py-3 rounded-lg flex items-center justify-center font-semibold transition-all ${
-            isLoading 
-            ? 'bg-slate-700 text-slate-400 cursor-not-allowed' 
-            : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-          }`}
+          className={`w-full py-3 rounded-lg flex items-center justify-center font-semibold transition-all ${isLoading
+              ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+            }`}
         >
           {isLoading ? (
             <span className="flex items-center">
@@ -310,11 +309,11 @@ Please analyze this configuration and integrate it into the 'New Vessel' archite
           )}
         </button>
 
-        <button 
-           onClick={handleHandover}
-           className="w-full py-3 rounded-lg flex items-center justify-center font-semibold text-xs bg-slate-800 border border-slate-700 text-indigo-300 hover:bg-slate-700 hover:text-white transition-all"
+        <button
+          onClick={handleHandover}
+          className="w-full py-3 rounded-lg flex items-center justify-center font-semibold text-xs bg-slate-800 border border-slate-700 text-indigo-300 hover:bg-slate-700 hover:text-white transition-all"
         >
-           <Send className="w-3 h-3 mr-2" /> ✨ Handover to Architect
+          <Send className="w-3 h-3 mr-2" /> ✨ Handover to Architect
         </button>
       </div>
 

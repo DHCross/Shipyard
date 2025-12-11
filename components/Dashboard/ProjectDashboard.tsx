@@ -80,8 +80,8 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             </div>
 
             {/* 3. THE LIVE MIRROR (PREVIEW) */}
-            <div className="flex-1 flex flex-col min-h-0 relative bg-black">
-                <div className="absolute top-3 right-3 z-10">
+            <div className="flex-1 flex flex-col min-h-0 relative bg-black group">
+                <div className="absolute top-3 right-3 z-10 flex gap-2">
                     <button
                         onClick={() => {
                             const iframe = document.getElementById('vessel-preview') as HTMLIFrameElement;
@@ -94,9 +94,38 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                     </button>
                 </div>
 
+                {/* FUTURE PLAN HUD OVERLAY */}
+                <div className="absolute bottom-6 left-6 z-10 max-w-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg p-4 shadow-2xl">
+                        <div className="flex items-center gap-2 mb-3 border-b border-slate-800 pb-2">
+                            <MapIcon className="w-4 h-4 text-indigo-400" />
+                            <span className="text-xs font-bold text-slate-100 tracking-widest uppercase">Project Roadmap</span>
+                        </div>
+                        <div className="space-y-3">
+                            <div className="relative pl-4 border-l-2 border-emerald-500">
+                                <div className="text-[10px] text-emerald-400 font-mono mb-0.5">CURRENT PHASE</div>
+                                <div className="text-sm font-medium text-slate-200">{astrolabe.phase.split(':')[1] || astrolabe.phase}</div>
+                                <div className="text-xs text-slate-400 mt-1">{astrolabe.bearing}</div>
+                            </div>
+
+                            <div className="relative pl-4 border-l-2 border-indigo-500/30">
+                                <div className="text-[10px] text-indigo-400/70 font-mono mb-0.5">NEXT HORIZON</div>
+                                <div className="text-sm font-medium text-slate-400">Phase 13: The Awakening</div>
+                                <div className="text-xs text-slate-500 mt-1">Integrate Poetic Brain as primary interface.</div>
+                            </div>
+
+                            <div className="relative pl-4 border-l-2 border-slate-700/30">
+                                <div className="text-[10px] text-slate-500 font-mono mb-0.5">LONG TERM</div>
+                                <div className="text-sm font-medium text-slate-500">Phase 14: Sovereignty</div>
+                                <div className="text-xs text-slate-600 mt-1">Full autonomous operation.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <iframe
                     id="vessel-preview"
-                    src="http://localhost:3000"
+                    src="http://localhost:3001"
                     className="w-full h-full border-0"
                     title="Vessel Preview"
                 />

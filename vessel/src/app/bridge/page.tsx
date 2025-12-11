@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Activity, Anchor } from 'lucide-react';
+import { Activity, Anchor, Lock, KeyRound } from 'lucide-react';
 import RequestPanel from '@/components/shipyard/RequestPanel';
 import ProjectDashboard from '@/components/shipyard/Dashboard/ProjectDashboard';
 import WorkspaceViewer from '@/components/shipyard/WorkspaceViewer';
@@ -10,7 +10,39 @@ import { ApiConfig, FetchedData, TabView, VirtualFile, ChatMessage, AstrolabeSta
 import { TransmissionOverlay } from '@/components/shipyard/Seance/TransmissionOverlay';
 import { CodemapViewer } from '@/components/shipyard/Telemetry/CodemapViewer';
 
+// Simple password gate
+const BRIDGE_KEY = 'merlin0773';
+const AUTH_STORAGE_KEY = 'shipyard_auth_v1';
+
 const ShipyardBridge: React.FC = () => {
+    // --- PASSWORD GATE ---
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [passwordInput, setPasswordInput] = useState('');
+    const [authError, setAuthError] = useState(false);
+
+    // Check for existing auth on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+            if (stored === 'authenticated') {
+                setIsAuthenticated(true);
+            }
+        }
+    }, []);
+
+    const handleLogin = () => {
+        if (passwordInput === BRIDGE_KEY) {
+            localStorage.setItem(AUTH_STORAGE_KEY, 'authenticated');
+            setIsAuthenticated(true);
+            setAuthError(false);
+        } else {
+            setAuthError(true);
+            setPasswordInput('');
+        }
+    };
+
+    // --- END PASSWORD GATE ---
+
     // Initialize with default, but try to load from localStorage on mount
     const [apiConfig, setApiConfig] = useState<ApiConfig>(() => {
         if (typeof window !== 'undefined') {
@@ -52,13 +84,13 @@ const ShipyardBridge: React.FC = () => {
 
     // Astrolabe State (The Compass) - Lifted to App level for persistence
     const [astrolabe, setAstrolabe] = useState<AstrolabeState>({
-        phase: "Phase 16: The Stowaway Protocol",
-        horizon: "Migrate Console to Internal Route",
-        bearing: "Port App.tsx to /bridge",
+        phase: "Phase 12: Oracle's Path",
+        horizon: "Connect Sensor Array to Perplexity",
+        bearing: "Integrate /api/oracle",
         tasks: [
-            { description: "Move Components to /shipyard", status: 'complete' },
-            { description: "Create API Routes (Periscope)", status: 'complete' },
-            { description: "Launch Internal Bridge", status: 'active' },
+            { description: "Secure internal route /api/oracle", status: 'complete' },
+            { description: "Update RequestPanel Sensors", status: 'complete' },
+            { description: "Verify Oracle Connection", status: 'active' },
         ],
         status: 'calibrated'
     });
@@ -220,6 +252,31 @@ const ShipyardBridge: React.FC = () => {
         pollFiles(); // Initial fetch
         return () => clearInterval(interval);
     }, []);
+
+    // --- PASSWORD GATE UI (minimal) ---
+    if (!isAuthenticated) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-950">
+                <div className="flex items-center gap-2">
+                    <input
+                        type="password"
+                        value={passwordInput}
+                        onChange={(e) => setPasswordInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                        placeholder="key"
+                        className={`w-32 bg-slate-900 border ${authError ? 'border-red-500' : 'border-slate-800'} rounded px-3 py-2 text-xs text-slate-400 placeholder-slate-700 focus:outline-none focus:border-slate-600 font-mono`}
+                        autoFocus
+                    />
+                    <button
+                        onClick={handleLogin}
+                        className="text-xs text-slate-600 hover:text-slate-400 font-mono"
+                    >
+                        →
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import ReactFlow, {
     Node,
     Edge,
@@ -10,10 +10,13 @@ import ReactFlow, {
     Handle,
     Position,
     NodeProps,
+    useReactFlow,
+    ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { VirtualFile } from '../../types';
-import { FileCode, FileText, FileJson, Folder, Cog } from 'lucide-react';
+import { FileCode, FileText, FileJson, Folder, Cog, Download } from 'lucide-react';
+import { toPng } from 'html-to-image';
 
 interface CodemapViewerProps {
     files: VirtualFile[];
@@ -59,7 +62,7 @@ const FileNode: React.FC<NodeProps> = ({ data }) => {
 
 const nodeTypes = { fileNode: FileNode };
 
-export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelect }) => {
+const CodemapContent: React.FC<CodemapViewerProps> = ({ files, onFileSelect }) => {
     // Generate nodes from files
     const initialNodes: Node[] = useMemo(() => {
         return files.map((file, index) => {
@@ -122,12 +125,34 @@ export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelec
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+    const { getNodes } = useReactFlow();
 
     // Update nodes when files change
     React.useEffect(() => {
         setNodes(initialNodes);
         setEdges(initialEdges);
     }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+    const onDownload = useCallback(() => {
+        const flowElement = document.querySelector('.react-flow__viewport');
+
+        if (flowElement) {
+            toPng(document.querySelector('.react-flow') as HTMLElement, {
+                backgroundColor: '#020617', // slate-950
+                filter: (node) => {
+                    // Filter out the controls and minimap if we want, but selecting root usually grabs them
+                    // Let's filter out the controls to make it cleaner
+                    return !node.classList?.contains('react-flow__controls');
+                }
+            }).then((dataUrl) => {
+                const a = document.createElement('a');
+                a.setAttribute('download', 'codemap.png');
+                a.setAttribute('href', dataUrl);
+                a.click();
+            });
+        }
+
+    }, []);
 
     if (files.length === 0) {
         return (
@@ -142,7 +167,16 @@ export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelec
     }
 
     return (
-        <div className="h-full w-full bg-slate-950">
+        <div className="h-full w-full bg-slate-950 relative group">
+            <div className="absolute top-4 right-4 z-50">
+                <button
+                    onClick={onDownload}
+                    className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 shadow-xl transition-all"
+                    title="Export Codemap"
+                >
+                    <Download className="w-4 h-4" />
+                </button>
+            </div>
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -168,5 +202,13 @@ export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelec
                 />
             </ReactFlow>
         </div>
+    );
+};
+
+export const CodemapViewer: React.FC<CodemapViewerProps> = (props) => {
+    return (
+        <ReactFlowProvider>
+            <CodemapContent {...props} />
+        </ReactFlowProvider>
     );
 };

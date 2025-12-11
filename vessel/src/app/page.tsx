@@ -1,4 +1,4 @@
-import React from 'react';
+import { OracleInterface } from '../components/OracleInterface';
 
 export default function Home() {
   return (
@@ -10,7 +10,7 @@ export default function Home() {
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-900/10 rounded-full blur-[128px] pointer-events-none"></div>
 
       {/* The Mirror Content */}
-      <div className="z-10 text-center space-y-8 flex flex-col items-center">
+      <div className="z-10 text-center space-y-8 flex flex-col items-center w-full max-w-4xl">
 
         {/* The Sigil / Title */}
         <div className="relative group cursor-default">
@@ -20,15 +20,8 @@ export default function Home() {
           </h1>
         </div>
 
-        {/* The Prompt */}
-        <p className="text-slate-500 font-mono text-xs uppercase tracking-[0.2em] animate-pulse">
-          The Mirror is Dark
-        </p>
-
-        {/* The Input Placeholder (Interactive element to come) */}
-        <div className="mt-12 w-full max-w-md mx-auto opacity-50">
-          <div className="h-px w-24 mx-auto bg-gradient-to-r from-transparent via-slate-700 to-transparent"></div>
-        </div>
+        {/* The Oracle Interface (Replaces static prompt) */}
+        <OracleInterface />
 
       </div>
 
