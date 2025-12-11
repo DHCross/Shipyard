@@ -1,5 +1,8 @@
 version: '3'
 
+includes:
+  ops: ./tasks/ops.yml
+
 tasks:
   default:
     desc: List available tasks
@@ -9,7 +12,7 @@ tasks:
   dev:
     desc: Start the Shipyard Development Server (Pilot Mode + Signal Bridge)
     cmds:
-      - npm run dev & node server/relay.js
+      - npm run dev & cd vessel && npm run dev & node server/relay.js
     interactive: true
 
   install:
@@ -27,8 +30,3 @@ tasks:
     cmds:
       - npm run preview
     interactive: true
-
-  clean:
-    desc: Remove node_modules and dist
-    cmds:
-      - rm -rf node_modules dist

@@ -1,6 +1,8 @@
 {
-  "id": "archeology-001",
-  "message": "ARCHEOLOGICAL DIG COMPLETE. The 'Persona Constitution' has been extracted from the Sacred Sites and established in the Shipyard. The Law of the Mirror is now active.",
-  "type": "architect",
-  "timestamp": 1715200000000
+  "id": "genesis-001",
+  "timestamp": "2025-12-10T15:30:00Z",
+  "sender": "THE SHIPWRIGHT",
+  "content": "THE KEEL IS LAID. The Vessel has been initialized. The Clean Mirror waits in the Drydock. We are now in Phase 14: Greenfield Scaffolding.",
+  "priority": "normal",
+  "encrypted": false
 }

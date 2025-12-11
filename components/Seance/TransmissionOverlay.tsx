@@ -3,7 +3,7 @@ import { Radio, Zap, X } from 'lucide-react';
 
 export interface Transmission {
     id: string;
-    message: string;
+    content: string;
     type: 'architect' | 'system';
     timestamp: number;
 }
@@ -11,7 +11,12 @@ export interface Transmission {
 export const TransmissionOverlay: React.FC = () => {
     const [transmission, setTransmission] = useState<Transmission | null>(null);
     const [isVisible, setIsVisible] = useState(false);
-    const [lastId, setLastId] = useState<string>('init');
+    const [lastId, setLastId] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('last_transmission_id') || 'init';
+        }
+        return 'init';
+    });
 
     // Seance Polling Hook
     useEffect(() => {
@@ -21,7 +26,13 @@ export const TransmissionOverlay: React.FC = () => {
                 if (res.ok) {
                     const data: Transmission = await res.json();
                     if (data.id !== lastId && data.id !== 'init') {
+                        // Double check against storage to catch fast updates
+                        const storedId = localStorage.getItem('last_transmission_id');
+                        if (data.id === storedId) return;
+
                         setLastId(data.id);
+                        localStorage.setItem('last_transmission_id', data.id);
+
                         setTransmission(data);
                         setIsVisible(true);
 
@@ -45,12 +56,12 @@ export const TransmissionOverlay: React.FC = () => {
     const isArchitect = transmission.type === 'architect';
 
     return (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] md:w-[600px] pointer-events-auto animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="fixed top-6 right-6 z-[100] w-[400px] pointer-events-auto animate-in fade-in slide-in-from-right-8 duration-500">
             <div className={`
-        relative overflow-hidden rounded-xl border-2 shadow-2xl backdrop-blur-md
+        relative overflow-hidden rounded-lg border shadow-2xl backdrop-blur-md
         ${isArchitect
-                    ? 'bg-indigo-950/90 border-indigo-500 shadow-indigo-500/30'
-                    : 'bg-slate-900/90 border-slate-600 shadow-black/50'}
+                    ? 'bg-indigo-950/90 border-indigo-500/50 shadow-indigo-500/20'
+                    : 'bg-slate-900/95 border-slate-700 shadow-xl'}
       `}>
 
                 {/* Header */}
@@ -72,7 +83,7 @@ export const TransmissionOverlay: React.FC = () => {
                         <Zap className="absolute top-4 right-4 w-12 h-12 text-indigo-500/20 rotate-12" />
                     )}
                     <p className={`text-lg md:text-xl font-serif leading-relaxed ${isArchitect ? 'text-white drop-shadow-md' : 'text-slate-200'}`}>
-                        "{transmission.message}"
+                        "{transmission.content}"
                     </p>
                     <div className="mt-4 text-[10px] font-mono opacity-50 text-right">
                         SIGNAL_ID: {transmission.id} • {new Date(transmission.timestamp).toLocaleTimeString()}

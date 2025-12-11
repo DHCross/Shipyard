@@ -13,7 +13,7 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
   const [activeTab, setActiveTab] = useState<LogTab>('manifest');
 
   const manifestFile = useMemo(() =>
-    files.find(f => f.path === 'VESSEL_MANIFEST.md'),
+    files.find(f => f.path === 'README.md'),
     [files]);
 
   const changelogFile = useMemo(() =>
