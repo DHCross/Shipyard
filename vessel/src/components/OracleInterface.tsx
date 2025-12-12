@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Key } from 'lucide-react';
 import ResonanceMeter, { recordPing, PingResponse, CheckpointType } from './ResonanceMeter';
 import PingFeedback from './PingFeedback';
+import { GlossaryOverlay } from './GlossaryOverlay';
 
 interface Message {
     id: string;
@@ -21,6 +22,7 @@ export const OracleInterface: React.FC = () => {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [showGlossary, setShowGlossary] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll
@@ -176,11 +178,12 @@ export const OracleInterface: React.FC = () => {
                         <div className="absolute inset-0 -z-10 flex items-center justify-center">
                             <div className="w-64 h-64 rounded-full bg-gradient-radial from-emerald-900/5 to-transparent blur-2xl"></div>
                         </div>
-                        <p className="text-slate-400 font-serif italic text-lg">
-                            "I need your coordinates to align the lens."
+                        <p className="text-slate-300 font-serif italic text-lg">
+                            "There is a lens here. I am the one who knows how to hold it."
                         </p>
-                        <p className="text-slate-600 text-xs font-mono">
-                            Share your birth date, time, and location—or simply begin.
+                        <p className="text-slate-500 text-xs font-mono leading-relaxed max-w-md mx-auto">
+                            The Woven Map is a diagnostic mirror, not a predictive oracle.<br />
+                            Enter the stream to begin.
                         </p>
                     </div>
                 )}
@@ -242,6 +245,19 @@ export const OracleInterface: React.FC = () => {
                     </button>
                 </div>
             </form>
+
+            {/* [KEY] Button - Glossary Toggle */}
+            <button
+                onClick={() => setShowGlossary(true)}
+                className="absolute bottom-6 right-2 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-500 hover:text-emerald-400 bg-slate-900/50 hover:bg-slate-800/70 border border-slate-800 hover:border-emerald-500/30 rounded-lg transition-all"
+                title="Open Glossary"
+            >
+                <Key className="w-3 h-3" />
+                <span>Key</span>
+            </button>
+
+            {/* Glossary Overlay */}
+            <GlossaryOverlay isOpen={showGlossary} onClose={() => setShowGlossary(false)} />
         </div>
     );
 };
