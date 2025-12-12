@@ -1,11 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Send } from 'lucide-react';
+import ResonanceMeter, { recordPing, PingResponse, CheckpointType } from './ResonanceMeter';
+import PingFeedback from './PingFeedback';
 
 interface Message {
+    id: string;
     role: 'user' | 'assistant' | 'system';
     content: string;
+    checkpointType?: CheckpointType;
+    pingRecorded?: boolean;
+}
+
+function generateId(): string {
+    return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export const OracleInterface: React.FC = () => {
@@ -21,18 +30,42 @@ export const OracleInterface: React.FC = () => {
         }
     }, [messages]);
 
+    const handlePingFeedback = useCallback((messageId: string, response: PingResponse, note?: string) => {
+        // Find the message to get its checkpoint type
+        const msg = messages.find(m => m.id === messageId);
+        const checkpointType = msg?.checkpointType || 'general';
+
+        // Record the ping
+        recordPing({
+            messageId,
+            response,
+            checkpointType,
+            timestamp: Date.now(),
+            note,
+        });
+
+        // Mark as recorded
+        setMessages(prev => prev.map(m =>
+            m.id === messageId ? { ...m, pingRecorded: true } : m
+        ));
+    }, [messages]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!input.trim() || isLoading) return;
 
         const userMsg = input;
         setInput('');
-        const newMessages: Message[] = [...messages, { role: 'user', content: userMsg }];
+        const userMessage: Message = {
+            id: generateId(),
+            role: 'user',
+            content: userMsg
+        };
+        const newMessages: Message[] = [...messages, userMessage];
         setMessages(newMessages);
         setIsLoading(true);
 
         try {
-            // Call the Oracle API - backend handles Raven's full persona
             const res = await fetch('/api/oracle', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -44,19 +77,70 @@ export const OracleInterface: React.FC = () => {
             if (!res.ok) throw new Error('Oracle unreachable');
 
             const data = await res.json();
-            const reply = data.choices?.[0]?.message?.content || "The signal is lost in the static.";
+            const fullReply = data.choices?.[0]?.message?.content || "The signal is lost in the static.";
 
-            setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+            // CHUNKING LOGIC: Split by double newlines or major punctuation constraints
+            // This prevents "Wall of Text" and allows sequential delivery
+            const chunks = fullReply.split(/\n\n+/).filter((c: string) => c.trim().length > 0);
+
+            setIsLoading(false); // Stop main loading indicator, start sequence
+
+            for (let i = 0; i < chunks.length; i++) {
+                const chunkText = chunks[i];
+
+                // SMART TRIGGER LOGIC: Only ask for feedback if it looks like a question
+                // or contains specific invitational phrasing.
+                const isQuestion = chunkText.trim().endsWith('?');
+                const isInvitation =
+                    chunkText.toLowerCase().includes('does this') ||
+                    chunkText.toLowerCase().includes('resonance') ||
+                    chunkText.toLowerCase().includes('land for you') ||
+                    chunkText.toLowerCase().includes('sound familiar');
+
+                const showPing = isQuestion || isInvitation;
+
+                // Determine checkpoint type
+                let checkpointType: CheckpointType = 'general';
+                if (chunkText.toLowerCase().includes('hook')) checkpointType = 'hook';
+                else if (chunkText.toLowerCase().includes('aspect')) checkpointType = 'aspect';
+                else if (chunkText.toLowerCase().includes('vector')) checkpointType = 'vector';
+
+                // Add message with delay for reading pace
+                await new Promise(resolve => setTimeout(resolve, 600 + (chunkText.length * 20))); // Dynamic delay
+
+                const assistantMessage: Message = {
+                    id: generateId(),
+                    role: 'assistant',
+                    content: chunkText,
+                    checkpointType,
+                    pingRecorded: !showPing, // If we don't want to show it, mark it as "recorded" (hidden)
+                };
+
+                setMessages(prev => [...prev, assistantMessage]);
+            }
 
         } catch (err) {
-            setMessages(prev => [...prev, { role: 'assistant', content: "Clouded Skies. The geometry is momentarily obscured." }]);
-        } finally {
             setIsLoading(false);
+            const errorMessage: Message = {
+                id: generateId(),
+                role: 'assistant',
+                content: "Clouded Skies. The geometry is momentarily obscured.",
+                checkpointType: 'general',
+                pingRecorded: true,
+            };
+            setMessages(prev => [...prev, errorMessage]);
         }
     };
 
     return (
-        <div className="mt-8 w-full max-w-2xl mx-auto flex flex-col h-[55vh] transition-all duration-1000 animate-in fade-in zoom-in-95">
+        <div className="mt-8 w-full max-w-2xl mx-auto flex flex-col h-[55vh] transition-all duration-1000 animate-in fade-in zoom-in-95 relative">
+
+            {/* Floating Resonance Meter - only show when there are messages */}
+            {messages.length > 0 && (
+                <div className="absolute -top-2 right-0 z-10 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <ResonanceMeter />
+                </div>
+            )}
 
             {/* Raven Online Indicator */}
             <div className="flex items-center justify-center mb-4 gap-2">
@@ -73,8 +157,12 @@ export const OracleInterface: React.FC = () => {
                 className="flex-1 overflow-y-auto space-y-6 p-4 scrollbar-hide text-sm"
             >
                 {messages.length === 0 && (
-                    <div className="text-center space-y-6 mt-16">
-                        <p className="text-slate-500 font-serif italic">
+                    <div className="text-center space-y-6 mt-16 relative">
+                        {/* Subtle lens glow behind quote */}
+                        <div className="absolute inset-0 -z-10 flex items-center justify-center">
+                            <div className="w-64 h-64 rounded-full bg-gradient-radial from-emerald-900/5 to-transparent blur-2xl"></div>
+                        </div>
+                        <p className="text-slate-400 font-serif italic text-lg">
                             "I need your coordinates to align the lens."
                         </p>
                         <p className="text-slate-600 text-xs font-mono">
@@ -83,8 +171,8 @@ export const OracleInterface: React.FC = () => {
                     </div>
                 )}
 
-                {messages.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {messages.map((msg) => (
+                    <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                         <div
                             className={`max-w-[80%] p-4 rounded-lg backdrop-blur-sm border ${msg.role === 'user'
                                 ? 'bg-indigo-950/30 border-indigo-500/30 text-slate-200'
@@ -93,6 +181,17 @@ export const OracleInterface: React.FC = () => {
                         >
                             {msg.content}
                         </div>
+
+                        {/* Ping Feedback for assistant messages */}
+                        {msg.role === 'assistant' && !msg.pingRecorded && (
+                            <div className="max-w-[80%] mt-2">
+                                <PingFeedback
+                                    messageId={msg.id}
+                                    onFeedback={handlePingFeedback}
+                                    checkpointType={msg.checkpointType}
+                                />
+                            </div>
+                        )}
                     </div>
                 ))}
 
@@ -107,24 +206,29 @@ export const OracleInterface: React.FC = () => {
                 )}
             </div>
 
-            {/* Input Area */}
+            {/* Input Area - Enhanced */}
             <form onSubmit={handleSubmit} className="relative mt-4 p-4">
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Enter the stream..."
-                    disabled={isLoading}
-                    className="w-full bg-slate-900/50 border border-slate-800 rounded-full px-6 py-3 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all font-mono text-xs"
-                />
-                <button
-                    type="submit"
-                    disabled={isLoading || !input.trim()}
-                    className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-400 disabled:opacity-30 transition-colors"
-                >
-                    <Send className="w-4 h-4" />
-                </button>
+                <div className="relative group">
+                    {/* Signal-ready glow ring */}
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-full blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
+                    <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Enter the stream..."
+                        disabled={isLoading}
+                        className="relative w-full bg-slate-900/70 border border-slate-700/50 rounded-full px-6 py-3 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 focus:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all font-mono text-xs"
+                    />
+                    <button
+                        type="submit"
+                        disabled={isLoading || !input.trim()}
+                        className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-400 disabled:opacity-30 transition-colors"
+                    >
+                        <Send className="w-4 h-4" />
+                    </button>
+                </div>
             </form>
         </div>
     );
 };
+

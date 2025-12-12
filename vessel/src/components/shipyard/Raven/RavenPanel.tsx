@@ -122,7 +122,7 @@ INSTRUCTION: Interpret this geometry for the user. Speak from the "Poetic Brain"
                 }
             });
 
-            const text = response.response.text();
+            const text = response.text ?? response.candidates?.[0]?.content?.parts?.map(p => p.text).join('') ?? 'Raven is silent.';
 
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),

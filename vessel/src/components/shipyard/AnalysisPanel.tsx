@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, FunctionDeclaration, Type, Content } from '@google/genai';
-import { FetchedData, ChatMessage, ApiConfig, AstrolabeData, VirtualFile, PathOption } from '@/types';
+import { FetchedData, ChatMessage, ApiConfig, AstrolabeState, VirtualFile, PathOption } from '@/types';
 import { Send, Bot, User, Sparkles, Terminal, Wrench, Image as ImageIcon, Download, Compass, Map as MapIcon, Anchor, RefreshCw, PlayCircle, Paperclip, ChevronDown } from 'lucide-react';
 import { ThreePathsCard } from './Planning/ThreePathsCard';
 
@@ -14,8 +14,8 @@ interface AnalysisPanelProps {
   virtualFiles?: VirtualFile[]; // Visibility into the Vessel state
   messages: ChatMessage[];
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
-  astrolabe: AstrolabeData;
-  setAstrolabe: React.Dispatch<React.SetStateAction<AstrolabeData>>;
+  astrolabe: AstrolabeState;
+  setAstrolabe: React.Dispatch<React.SetStateAction<AstrolabeState>>;
   mode: 'builder' | 'pilot';
   setMode: (mode: 'builder' | 'pilot') => void;
 }
@@ -551,7 +551,7 @@ PHILOSOPHY:
                 let base64Image = '';
                 for (const part of imageResp.candidates?.[0]?.content?.parts || []) {
                   if (part.inlineData) {
-                    base64Image = part.inlineData.data;
+                    base64Image = part.inlineData.data ?? '';
                     break;
                   }
                 }
@@ -814,7 +814,7 @@ PHILOSOPHY:
                   {astrolabe.tasks.map((task, idx) => (
                     <div key={idx} className="px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 border-b border-slate-800/50 last:border-0 flex items-start">
                       <span className="text-amber-500/50 font-mono mr-2">{idx + 1}.</span>
-                      {task}
+                      {typeof task === 'string' ? task : task.description}
                     </div>
                   ))}
                 </div>

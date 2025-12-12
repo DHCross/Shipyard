@@ -168,14 +168,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
                                 <div className="relative pl-4 border-l-2 border-indigo-500/30">
                                     <div className="text-[10px] text-indigo-400/70 font-mono mb-0.5">NEXT HORIZON</div>
-                                    <div className="text-sm font-medium text-slate-400">Phase 13: The Awakening</div>
-                                    <div className="text-xs text-slate-500 mt-1">Integrate Poetic Brain as primary interface.</div>
+                                    <div className="text-sm font-medium text-slate-400">Phase 15: Sovereignty</div>
+                                    <div className="text-xs text-slate-500 mt-1">Full autonomous operation & self-repair.</div>
                                 </div>
 
                                 <div className="relative pl-4 border-l-2 border-slate-700/30">
                                     <div className="text-[10px] text-slate-500 font-mono mb-0.5">LONG TERM</div>
-                                    <div className="text-sm font-medium text-slate-500">Phase 14: Sovereignty</div>
-                                    <div className="text-xs text-slate-600 mt-1">Full autonomous operation.</div>
+                                    <div className="text-sm font-medium text-slate-500">Phase 16: Expansion</div>
+                                    <div className="text-xs text-slate-600 mt-1">Ecosystem growth and external API.</div>
                                 </div>
                             </div>
                         </div>

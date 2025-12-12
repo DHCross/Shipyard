@@ -84,15 +84,15 @@ const ShipyardBridge: React.FC = () => {
 
     // Astrolabe State (The Compass) - Lifted to App level for persistence
     const [astrolabe, setAstrolabe] = useState<AstrolabeState>({
-        phase: "Phase 12: Oracle's Path",
-        horizon: "Phase 13: The Awakening",
-        bearing: "Integrate Poetic Brain as primary interface",
+        phase: "Phase 14: The Awakening",
+        horizon: "Phase 15: Sovereignty",
+        bearing: "Wire Reports & Instrument Readout",
         tasks: [
-            { description: "Secure internal route /api/oracle", status: 'complete' },
-            { description: "Update RequestPanel Sensors", status: 'complete' },
-            { description: "Verify Oracle Connection (Poetic Brain)", status: 'complete' },
-            { description: "Verify Astrology Connection (Math Brain)", status: 'complete' },
-            { description: "Draft Session Summary Script", status: 'active' },
+            { description: "Phase 13: Oracle's Path", status: 'complete' },
+            { description: "Wire Astro Reports to Chart Engine", status: 'active' },
+            { description: "Add Instrument Readout UI", status: 'pending' },
+            { description: "User Testing / Voice Iteration", status: 'pending' },
+            { description: "Final Documentation Audit", status: 'pending' },
         ],
         status: 'calibrated'
     });

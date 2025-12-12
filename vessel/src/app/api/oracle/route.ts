@@ -32,6 +32,15 @@ function applySomaticGuard(text: string): string {
     return filtered;
 }
 
+/**
+ * Guardrail: Strip Perplexity citation brackets [1], [2], etc.
+ * Raven never shows academic citations in output.
+ */
+function stripCitations(text: string): string {
+    // Remove citation brackets like [1], [2], [1,2], [1-3], etc.
+    return text.replace(/\[\d+(?:[,\-]\d+)*\]/g, '').replace(/\s{2,}/g, ' ').trim();
+}
+
 export async function POST(request: Request) {
     try {
         const body = await request.json();
@@ -91,9 +100,12 @@ export async function POST(request: Request) {
             return NextResponse.json(data, { status: response.status });
         }
 
-        // Apply somatic guard to the response
+        // Apply guards to the response
         if (data.choices && data.choices[0]?.message?.content) {
-            data.choices[0].message.content = applySomaticGuard(data.choices[0].message.content);
+            let content = data.choices[0].message.content;
+            content = stripCitations(content);  // Remove [1], [2] etc.
+            content = applySomaticGuard(content);  // Replace somatic terms
+            data.choices[0].message.content = content;
         }
 
         return NextResponse.json(data);
