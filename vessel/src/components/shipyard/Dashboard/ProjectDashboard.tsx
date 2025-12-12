@@ -143,10 +143,21 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 <div className="flex-1 relative min-h-0">
                     {/* FUTURE PLAN HUD OVERLAY */}
                     <div className={`absolute bottom-6 left-6 z-10 max-w-sm pointer-events-none transition-opacity duration-300 ${showRoadmap ? 'opacity-100' : 'opacity-0'}`}>
-                        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg p-4 shadow-2xl">
-                            <div className="flex items-center gap-2 mb-3 border-b border-slate-800 pb-2">
-                                <MapIcon className="w-4 h-4 text-indigo-400" />
-                                <span className="text-xs font-bold text-slate-100 tracking-widest uppercase">Project Roadmap</span>
+                        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg p-4 shadow-2xl pointer-events-auto">
+                            <div className="flex items-center justify-between gap-2 mb-3 border-b border-slate-800 pb-2">
+                                <div className="flex items-center gap-2">
+                                    <MapIcon className="w-4 h-4 text-indigo-400" />
+                                    <span className="text-xs font-bold text-slate-100 tracking-widest uppercase">Project Roadmap</span>
+                                </div>
+                                <button
+                                    onClick={() => setShowRoadmap(false)}
+                                    className="text-slate-500 hover:text-slate-300 transition-colors p-0.5 rounded hover:bg-slate-800"
+                                    title="Dismiss"
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
                             <div className="space-y-3">
                                 <div className="relative pl-4 border-l-2 border-emerald-500">

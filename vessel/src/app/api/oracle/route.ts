@@ -80,7 +80,7 @@ export async function POST(request: Request) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: model || 'llama-3.1-sonar-large-128k-online',
+                model: model || 'sonar',
                 messages: processedMessages
             }),
         });
