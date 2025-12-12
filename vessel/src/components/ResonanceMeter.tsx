@@ -173,7 +173,7 @@ const ResonanceMeter: React.FC<ResonanceMeterProps> = ({
   if (!stats || stats.total === 0) {
     return (
       <div className={`resonance-meter empty ${className}`}>
-        <span className="meter-icon">🎯</span>
+        <span className="meter-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h2" /><path d="M6 8v8" /><path d="M10 4v16" /><path d="M14 8v8" /><path d="M18 6v12" /><path d="M22 12h-2" /></svg></span>
         <span className="meter-label">Resonance</span>
         <span className="meter-value muted">Awaiting pings</span>
         <style jsx>{`
@@ -221,7 +221,7 @@ const ResonanceMeter: React.FC<ResonanceMeterProps> = ({
         tabIndex={0}
         onKeyDown={(e) => e.key === 'Enter' && setShowDetails(!showDetails)}
       >
-        <span className="meter-icon">🎯</span>
+        <span className="meter-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h2" /><path d="M6 8v8" /><path d="M10 4v16" /><path d="M14 8v8" /><path d="M18 6v12" /><path d="M22 12h-2" /></svg></span>
         <span className="meter-label">Accuracy</span>
         <span
           className="meter-value"

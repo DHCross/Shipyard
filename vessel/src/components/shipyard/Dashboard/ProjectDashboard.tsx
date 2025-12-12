@@ -12,7 +12,12 @@ import {
     Globe,
     ExternalLink,
     Eye,
-    EyeOff
+    EyeOff,
+    ChevronDown,
+    ChevronUp,
+    CheckCircle2,
+    Circle,
+    Loader2
 } from 'lucide-react';
 import { ChatMessage, AstrolabeState } from '@/types';
 
@@ -31,6 +36,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const [urlPath, setUrlPath] = useState('/');
     const [iframeSrc, setIframeSrc] = useState('http://localhost:3000');
     const [showRoadmap, setShowRoadmap] = useState(true);
+    const [astrolabeExpanded, setAstrolabeExpanded] = useState(false);
 
     // Auto-scroll to bottom of log
     useEffect(() => {
@@ -66,24 +72,88 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             </div>
 
             {/* 2. ASTROLABE: COMPACT HEADS UP DISPLAY */}
-            <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-indigo-400" />
-                        <span className="text-slate-200 font-medium">{astrolabe.phase}</span>
+            <div className="border-b border-slate-800 bg-slate-900/40 shrink-0">
+                {/* Collapsed view */}
+                <div
+                    className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-800/30 transition-colors"
+                    onClick={() => setAstrolabeExpanded(!astrolabeExpanded)}
+                >
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-indigo-400" />
+                            <span className="text-slate-200 font-medium">{astrolabe.phase}</span>
+                        </div>
+                        <div className="h-4 w-px bg-slate-700"></div>
+                        <div className="flex items-center gap-2">
+                            <Anchor className="w-4 h-4 text-emerald-400" />
+                            <span className="text-slate-400 text-xs">NEXT:</span>
+                            <span className="text-emerald-300 text-sm">{astrolabe.bearing}</span>
+                        </div>
                     </div>
-                    <div className="h-4 w-px bg-slate-700"></div>
-                    <div className="flex items-center gap-2">
-                        <Anchor className="w-4 h-4 text-emerald-400" />
-                        <span className="text-slate-400 text-xs">NEXT:</span>
-                        <span className="text-emerald-300 text-sm">{astrolabe.bearing}</span>
+
+                    {/* Expand toggle + Horizon */}
+                    <div className="flex items-center gap-4 text-xs">
+                        <span className="text-slate-500 uppercase tracking-widest">Horizon: {astrolabe.horizon}</span>
+                        {astrolabeExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-slate-500" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4 text-slate-500" />
+                        )}
                     </div>
                 </div>
 
-                {/* Compact Task Status */}
-                <div className="flex items-center gap-4 text-xs">
-                    <span className="text-slate-500 uppercase tracking-widest">Horizon: {astrolabe.horizon}</span>
-                </div>
+                {/* Expanded view - Task List */}
+                {astrolabeExpanded && (
+                    <div className="px-6 pb-4 border-t border-slate-800/50 animate-in slide-in-from-top-2 duration-200">
+                        <div className="grid grid-cols-2 gap-6 pt-4">
+                            {/* Task List */}
+                            <div>
+                                <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-3 font-bold">Task Queue</div>
+                                <div className="space-y-2">
+                                    {astrolabe.tasks.map((task, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                            {task.status === 'complete' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                                            {task.status === 'active' && <Loader2 className="w-3.5 h-3.5 text-indigo-400 animate-spin" />}
+                                            {task.status === 'pending' && <Circle className="w-3.5 h-3.5 text-slate-600" />}
+                                            <span className={`text-xs ${task.status === 'complete' ? 'text-slate-500 line-through' :
+                                                task.status === 'active' ? 'text-indigo-300' : 'text-slate-500'
+                                                }`}>
+                                                {task.description}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Future Phases */}
+                            <div>
+                                <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-3 font-bold">Roadmap</div>
+                                <div className="space-y-3 text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                        <span className="text-emerald-400">Phase 14: Raven Refinement</span>
+                                        <span className="text-slate-600">— Current (Bimodal Fix)</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-indigo-500/50"></div>
+                                        <span className="text-slate-400">Phase 15: The Awakening</span>
+                                        <span className="text-slate-600">— Reports & Instrument Readout</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-slate-700"></div>
+                                        <span className="text-slate-500">Phase 16: Sovereignty</span>
+                                        <span className="text-slate-600">— Autonomous operation</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-slate-800"></div>
+                                        <span className="text-slate-600">Phase 17: Expansion</span>
+                                        <span className="text-slate-700">— External API</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 3. THE LIVE MIRROR (PREVIEW) */}

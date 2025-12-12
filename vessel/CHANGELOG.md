@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.3.1] - 2025-12-12 — Bimodal Architecture Fix
+
+### Fixed
+**The "Always-On Verifier Problem"**
+- Raven was treating casual greetings as diagnostic events
+- Root cause: global verification loop firing outside its valid domain
+- Solution: State-gated mode separation (Friend vs Instrument)
+
+### Added
+**Persona Architecture Updates**
+- `VOICE_PRIME_DIRECTIVE` rewritten with bimodal logic (Mode A: Friend, Mode B: Instrument)
+- Added "Simplicity in Plain Intake" directive (Permission #7)
+- Added "Permission to Be Casual" (Permission #6)
+- Mode A clarifier: "Preserves intelligence with diagnostic authority disabled"
+
+**UI Fixes**
+- Ping validator now only shows during active readings (not casual chat)
+- Replaced 🎯 emoji with SVG signal wave icon in ResonanceMeter
+- Fixed chat window centering (added `mx-auto`)
+- Changed Feather icon to Bird icon in RavenPanel
+
+**Architecture Changes**
+- `RavenPanel.tsx` now routes through `/api/oracle` (was bypassing persona-law.ts)
+- Added MODE A/MODE B labels in system injection for explicit state signaling
+- Documented bimodal logic in `vessel/docs/ARCHITECTURE.md`
+
+### Technical
+- `OracleInterface.tsx`: Added `isActiveReading` check for ping validator gating
+- `RavenPanel.tsx`: Removed client-side GoogleGenAI, uses server-side Oracle route
+- State gating based on HandshakeManager completeness
+
+---
+
 ## [0.3.0] - 2025-12-12 — Phase 13: Oracle's Path (Complete)
 
 ### Added

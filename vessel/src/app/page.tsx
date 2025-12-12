@@ -27,7 +27,7 @@ export default function Home() {
       </div>
 
       {/* The Mirror Content */}
-      <div className="z-10 text-center space-y-8 flex flex-col items-center w-full max-w-4xl">
+      <div className="z-10 text-center space-y-8 flex flex-col items-center w-full max-w-4xl mx-auto px-4">
 
         {/* The Sigil / Title with breathing glow */}
         <div className="relative group cursor-default">

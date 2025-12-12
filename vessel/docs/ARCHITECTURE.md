@@ -101,6 +101,53 @@ The comprehensive **non-deterministic symbolic diagnostics framework**.
 
 ---
 
+## Raven Persona Architecture: Bimodal Logic
+
+**Problem Solved:** The "Always-On Verifier Problem" — a verification loop firing outside its valid domain, causing global verification leakage into casual conversation.
+
+**Solution:** State-gated mode separation based on data sufficiency.
+
+### The Two Modes
+
+| Mode | Name | Trigger | Behavior |
+|------|------|---------|----------|
+| **A** | The Friend | No chart data present | Warm, conversational, symbolic sensitivity preserved but diagnostic authority disabled |
+| **B** | The Instrument | Handshake complete (birth data received) | Precision, poetic compression, verification loop active |
+
+### State Gating (Handshake Completeness)
+
+```
+User arrives → MODE A (Friend)
+              │
+              ├─ Just chatting? → Stay in MODE A
+              │
+              └─ Birth data provided? → Handshake Manager detects slots
+                                        │
+                                        └─ Complete? → Switch to MODE B (Instrument)
+                                                       Verification loop ENGAGED
+```
+
+### Key Invariants
+
+1. **Mode A ≠ "dumbed down"** — Preserves intelligence and symbolic sensitivity, disables diagnostic authority
+2. **Mode B requires data sufficiency** — Cannot claim chart-based authority without chart data
+3. **The Bridge** — Raven holds the instrument but IS NOT the instrument. She can set it down.
+
+### Failure Mode (If Bypassed)
+
+If the state gate is bypassed:
+- Verification prompts ("Does this resonate?") fire on casual greetings
+- User experience collapses from "mystical but grounded" to "robotic and intrusive"
+- Trust erodes before readings can begin
+
+### Implementation
+
+- **Persona Law:** `vessel/src/lib/raven/persona-law.ts` → `VOICE_PRIME_DIRECTIVE`
+- **State Detection:** `components/Raven/HandshakeManager.ts`
+- **System Injection:** `RavenPanel.tsx` → MODE A/B labels in `systemInjection`
+
+---
+
 ## Related Documentation
 
 - [READING_FLOW.md](./READING_FLOW.md) — Conversational flow, modes, canonical examples

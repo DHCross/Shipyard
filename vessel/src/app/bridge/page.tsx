@@ -84,15 +84,16 @@ const ShipyardBridge: React.FC = () => {
 
     // Astrolabe State (The Compass) - Lifted to App level for persistence
     const [astrolabe, setAstrolabe] = useState<AstrolabeState>({
-        phase: "Phase 14: The Awakening",
-        horizon: "Phase 15: Sovereignty",
-        bearing: "Wire Reports & Instrument Readout",
+        phase: "Phase 14: Raven Refinement",
+        horizon: "Phase 15: The Awakening",
+        bearing: "Bimodal Architecture & Voice Iteration",
         tasks: [
             { description: "Phase 13: Oracle's Path", status: 'complete' },
-            { description: "Wire Astro Reports to Chart Engine", status: 'active' },
-            { description: "Add Instrument Readout UI", status: 'pending' },
-            { description: "User Testing / Voice Iteration", status: 'pending' },
-            { description: "Final Documentation Audit", status: 'pending' },
+            { description: "Bimodal Fix (Friend vs Instrument)", status: 'complete' },
+            { description: "Ping Validator Gating", status: 'complete' },
+            { description: "Architecture Documentation", status: 'complete' },
+            { description: "Manual Verification (MODE B)", status: 'active' },
+            { description: "Wire Reports to Chart Engine", status: 'pending' },
         ],
         status: 'calibrated'
     });

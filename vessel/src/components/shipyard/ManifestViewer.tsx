@@ -10,7 +10,7 @@ interface ManifestViewerProps {
 type LogTab = 'manifest' | 'changelog' | 'roadmap' | 'sessions';
 
 const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
-  const [activeTab, setActiveTab] = useState<LogTab>('manifest');
+  const [activeTab, setActiveTab] = useState<LogTab>('roadmap');
   const [selectedSessionPath, setSelectedSessionPath] = useState<string | null>(null);
 
   // New Log Entry State

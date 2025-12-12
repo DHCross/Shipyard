@@ -88,8 +88,8 @@ export const OracleInterface: React.FC = () => {
             for (let i = 0; i < chunks.length; i++) {
                 const chunkText = chunks[i];
 
-                // SMART TRIGGER LOGIC: Only ask for feedback if it looks like a question
-                // or contains specific invitational phrasing.
+                // SMART TRIGGER LOGIC: Only ask for feedback if it looks like a READING question
+                // NOT for casual chat questions like "What would you like held up first?"
                 const isQuestion = chunkText.trim().endsWith('?');
                 const isInvitation =
                     chunkText.toLowerCase().includes('does this') ||
@@ -97,7 +97,21 @@ export const OracleInterface: React.FC = () => {
                     chunkText.toLowerCase().includes('land for you') ||
                     chunkText.toLowerCase().includes('sound familiar');
 
-                const showPing = isQuestion || isInvitation;
+                // READING INDICATOR: Only show ping if response contains reading-specific language
+                // This prevents pings during "Friend Mode" (Plain Intake)
+                const isActiveReading =
+                    chunkText.toLowerCase().includes('natal') ||
+                    chunkText.toLowerCase().includes('chart') ||
+                    chunkText.toLowerCase().includes('geometry') ||
+                    chunkText.toLowerCase().includes('transit') ||
+                    chunkText.toLowerCase().includes('aspect') ||
+                    chunkText.toLowerCase().includes('blueprint') ||
+                    chunkText.toLowerCase().includes('instrument') ||
+                    chunkText.toLowerCase().includes('derived-from') ||
+                    chunkText.toLowerCase().includes('pressure pattern') ||
+                    chunkText.toLowerCase().includes('mirror flow');
+
+                const showPing = isActiveReading && (isQuestion || isInvitation);
 
                 // Determine checkpoint type
                 let checkpointType: CheckpointType = 'general';

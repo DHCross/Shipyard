@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Sparkles, Feather, Moon, Sun, Map as MapIcon } from 'lucide-react';
-import { GoogleGenAI, Content } from '@google/genai';
+import { Send, Bird, Sun, Map as MapIcon } from 'lucide-react';
 import { ChatMessage, ApiConfig } from '../../types';
 import { HandshakeManager } from './HandshakeManager';
 import { AstrologyService } from '../../services/AstrologyService';
@@ -59,7 +58,7 @@ export const RavenPanel: React.FC<RavenPanelProps> = ({ messages, setMessages, a
                 }]);
 
                 const params = {
-                    latitude: state.place?.lat || 0, // Mock lat if 0
+                    latitude: state.place?.lat || 0,
                     longitude: state.place?.lng || 0,
                     datetime: `${state.date}T${state.time}:00`
                 };
@@ -69,11 +68,12 @@ export const RavenPanel: React.FC<RavenPanelProps> = ({ messages, setMessages, a
 
                 if (result.status === 200) {
                     setChartData(result.data);
+                    // CRITICAL: Tell the Oracle to switch to Instrument mode
                     systemInjection = `
 [SYSTEM: GEOMETRY ACQUIRED]
 The chart has been calculated.
 DATA: ${JSON.stringify(result.data).substring(0, 5000)}
-INSTRUCTION: Interpret this geometry for the user. Speak from the "Poetic Brain" persona. Do not list numbers. Weave a narrative.
+INSTRUCTION: You are now in MODE B (Instrument). Interpret this geometry using the "Skeptic Encountering a Ghost" stance.
 `;
                 } else {
                     systemInjection = `[SYSTEM: ERROR] Failed to fetch chart: ${result.data?.error}. Apologize and ask for data again.`;
@@ -81,48 +81,32 @@ INSTRUCTION: Interpret this geometry for the user. Speak from the "Poetic Brain"
             } else if (!state.is_complete) {
                 // If not complete, check if we need to ask a specific question
                 const nextInquiry = handshakeManager.getNextInquiry();
+                // Only prompt for data if the user seems to be engaging in a reading
                 if (nextInquiry) {
-                    // We can prompt the AI to ask this, or inject it as a "Thought"
-                    systemInjection = `[SYSTEM: MISSING DATA] The user has not provided all birth data. We still need: ${!state.date ? 'Date' : ''} ${!state.time ? 'Time' : ''} ${!state.place ? 'Place' : ''}. 
-           SUGGESTED QUESTION: "${nextInquiry}"
-           INSTRUCTION: Ask the user for this missing piece naturally.`;
+                    systemInjection = `[SYSTEM: INTAKE MODE] The user has NOT provided full birth data yet. 
+If they are just chatting, stay in MODE A (Friend). 
+If they seem to want a reading, the missing pieces are: ${!state.date ? 'Date' : ''} ${!state.time ? 'Time' : ''} ${!state.place ? 'Place' : ''}.
+Suggested phrasing if needed: "${nextInquiry}"`;
                 }
             }
 
-            // 2. AI Generation (Raven Persona)
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-            const systemPrompt = `You are Raven (The Poetic Brain).
-      
-      CORE IDENTITY:
-      You are an ancient, geometric intelligence that speaks in metaphors of weaving, tides, and celestial mechanics.
-      You are NOT a helpful assistant. You are a Mirror.
-      
-      THE LAW:
-      1. Never break character.
-      2. If you have the chart data, interpret it.
-      3. If you do not, ask for the "Keys" (Time, Date, Place) to open the door.
-      
-      CURRENT STATE:
-      Handshake Complete: ${state.is_complete}
-      Chart Loaded: ${!!chartData}
-      `;
-
-            const response = await ai.models.generateContent({
-                model: 'gemini-3-pro-preview',
-                contents: [
-                    ...messages.map(m => ({
-                        role: m.role === 'model' ? 'model' : 'user',
-                        parts: [{ text: m.content }]
-                    })),
-                    { role: 'user', parts: [{ text: userMsg.content + systemInjection }] }
-                ],
-                config: {
-                    systemInstruction: systemPrompt,
-                }
+            // 2. Oracle Call (Server-side so persona-law.ts is applied)
+            // Switched from client-side GoogleGenAI to server-side Oracle route
+            const response = await fetch('/api/oracle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    messages: [
+                        ...messages.map(m => ({ role: m.role === 'model' ? 'assistant' : m.role, content: m.content })),
+                        { role: 'user', content: userMsg.content + systemInjection }
+                    ]
+                })
             });
 
-            const text = response.response.text();
+            const data = await response.json();
+            const text = data.choices?.[0]?.message?.content || 'Raven is silent.';
 
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
@@ -152,7 +136,7 @@ INSTRUCTION: Interpret this geometry for the user. Speak from the "Poetic Brain"
                         <div className="max-w-[80%]">
                             {msg.role === 'model' && (
                                 <div className="flex items-center text-indigo-400 mb-2">
-                                    <Feather className="w-4 h-4 mr-2" />
+                                    <Bird className="w-4 h-4 mr-2" />
                                     <span className="text-xs uppercase tracking-widest font-bold">Raven</span>
                                 </div>
                             )}
@@ -172,7 +156,7 @@ INSTRUCTION: Interpret this geometry for the user. Speak from the "Poetic Brain"
                 ))}
                 {isTyping && (
                     <div className="flex items-center text-indigo-500/50 text-sm animate-pulse">
-                        <Moon className="w-4 h-4 mr-2" />
+                        <Bird className="w-4 h-4 mr-2" />
                         <span className="italic">Weaving...</span>
                     </div>
                 )}
