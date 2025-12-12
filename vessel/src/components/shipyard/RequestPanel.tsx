@@ -25,28 +25,45 @@ const PRESETS: Record<string, ApiConfig> = {
     body: ''
   },
   astrology: {
-    url: 'https://best-astrology-api-natal-charts-transits-synastry.p.rapidapi.com/western_chart_data',
+    url: '/api/astrology',
     method: 'POST',
     headers: [
-      { key: 'x-rapidapi-key', value: '', id: 'rapid-key' },
-      { key: 'x-rapidapi-host', value: 'best-astrology-api-natal-charts-transits-synastry.p.rapidapi.com', id: 'rapid-host' },
       { key: 'Content-Type', value: 'application/json', id: 'content-type' }
     ],
     body: JSON.stringify({
-      "latitude": 37.7749,
-      "longitude": -122.4194,
-      "datetime": "1990-01-01T12:00:00Z"
+      "endpoint": "/api/v3/data/positions",
+      "method": "POST",
+      "payload": {
+        "subject": {
+          "name": "Shipyard Test",
+          "birth_data": {
+            "year": 1990,
+            "month": 1,
+            "day": 1,
+            "hour": 12,
+            "minute": 0,
+            "second": 0,
+            "latitude": 37.7749,
+            "longitude": -122.4194
+          }
+        },
+        "options": {
+          "zodiac_type": "Tropic",
+          "house_system": "P",
+          "active_points": ["Sun", "Moon", "Ascendant", "Medium_Coeli"]
+        }
+      }
     }, null, 2)
   },
   perplexity: {
     url: '/api/oracle',
     method: 'POST',
     headers: [
-      { key: 'x-perplexity-key', value: 'YOUR_KEY_HERE', id: 'auth' },
+      // { key: 'x-perplexity-key', value: 'ENV_VAR_USED', id: 'auth' },
       { key: 'Content-Type', value: 'application/json', id: 'content-type' }
     ],
     body: JSON.stringify({
-      "model": "llama-3.1-sonar-small-128k-online",
+      "model": "llama-3.1-sonar-large-128k-online",
       "messages": [
         {
           "role": "system",
@@ -290,8 +307,8 @@ Please analyze this configuration and integrate it into the 'New Vessel' archite
           onClick={onFetch}
           disabled={isLoading}
           className={`w-full py-3 rounded-lg flex items-center justify-center font-semibold transition-all ${isLoading
-              ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+            ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+            : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
             }`}
         >
           {isLoading ? (

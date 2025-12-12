@@ -38,6 +38,7 @@ export interface FetchedData {
   data: any;
   timestamp: number;
   duration: number;
+  hint?: string;
 }
 
 export enum TabView {

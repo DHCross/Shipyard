@@ -1,16 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { VirtualFile, ChatMessage } from '@/types';
-import { Scroll, Download, Activity, BookOpen, MessageSquare, FileText, Clock } from 'lucide-react';
+import { Scroll, Download, Activity, BookOpen, MessageSquare, FileText, Clock, Map as MapIcon, Terminal } from 'lucide-react';
 
 interface ManifestViewerProps {
   files: VirtualFile[];
   messages: ChatMessage[];
 }
 
-type LogTab = 'manifest' | 'changelog';
+type LogTab = 'manifest' | 'changelog' | 'roadmap' | 'sessions';
 
 const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
   const [activeTab, setActiveTab] = useState<LogTab>('manifest');
+  const [selectedSessionPath, setSelectedSessionPath] = useState<string | null>(null);
 
   const manifestFile = useMemo(() =>
     files.find(f => f.path === 'README.md'),
@@ -20,8 +21,29 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
     files.find(f => f.path.toLowerCase().includes('changelog')),
     [files]);
 
+  const roadmapFile = useMemo(() =>
+    files.find(f => f.path.toLowerCase().includes('roadmap')),
+    [files]);
+
+  const sessionFiles = useMemo(() =>
+    files
+      .filter(f => f.path.includes('logs/sessions/session_'))
+      .sort((a, b) => b.timestamp - a.timestamp), // Newest first
+    [files]);
+
+  const activeSessionFile = useMemo(() => {
+    if (selectedSessionPath) {
+      return sessionFiles.find(f => f.path === selectedSessionPath) || sessionFiles[0];
+    }
+    return sessionFiles[0];
+  }, [sessionFiles, selectedSessionPath]);
+
   const handleDownload = () => {
-    const file = activeTab === 'manifest' ? manifestFile : changelogFile;
+    let file = manifestFile;
+    if (activeTab === 'changelog') file = changelogFile;
+    if (activeTab === 'roadmap') file = roadmapFile;
+    if (activeTab === 'sessions') file = activeSessionFile;
+
     if (file) {
       const blob = new Blob([file.content], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
@@ -87,9 +109,12 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
     });
   };
 
-  const activeFile = activeTab === 'manifest' ? manifestFile : changelogFile;
+  let activeFile = manifestFile;
+  if (activeTab === 'changelog') activeFile = changelogFile;
+  if (activeTab === 'roadmap') activeFile = roadmapFile;
+  if (activeTab === 'sessions') activeFile = activeSessionFile;
 
-  if (!manifestFile && !changelogFile) {
+  if (!manifestFile && !changelogFile && !roadmapFile && sessionFiles.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-60">
         <Scroll className="w-16 h-16 mb-4 stroke-1" />
@@ -100,7 +125,7 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
   }
 
   return (
-    <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-slate-900 border border-slate-800 rounded-lg overflow-hidden relative">
       {/* Header */}
       <div className="h-12 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between px-4">
         <div className="flex items-center space-x-2">
@@ -114,7 +139,7 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
             title="Export Chat Session"
           >
             <MessageSquare className="w-3 h-3 mr-2" />
-            Export Transcript
+            Export Captain's Log
           </button>
           <button
             onClick={handleDownload}
@@ -144,7 +169,42 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
           <Clock className="w-3 h-3 inline-block mr-1" />
           Changelog
         </button>
+        <button
+          onClick={() => setActiveTab('roadmap')}
+          disabled={!roadmapFile}
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'roadmap' ? 'text-indigo-400 border-b-2 border-indigo-500 bg-slate-800/50' : 'text-slate-500 hover:text-slate-300'} ${!roadmapFile ? 'opacity-30 cursor-not-allowed' : ''}`}
+        >
+          <MapIcon className="w-3 h-3 inline-block mr-1" />
+          Roadmap
+        </button>
+        <button
+          onClick={() => setActiveTab('sessions')}
+          disabled={sessionFiles.length === 0}
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'sessions' ? 'text-purple-400 border-b-2 border-purple-500 bg-slate-800/50' : 'text-slate-500 hover:text-slate-300'} ${sessionFiles.length === 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
+        >
+          <Terminal className="w-3 h-3 inline-block mr-1" />
+          Sessions
+        </button>
       </div>
+
+      {/* Session Browser Header */}
+      {activeTab === 'sessions' && sessionFiles.length > 0 && (
+        <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center space-x-2 overflow-x-auto scrollbar-hide">
+          <span className="text-[10px] uppercase font-bold text-slate-500 flex-shrink-0">Logs:</span>
+          {sessionFiles.map((file) => (
+            <button
+              key={file.path}
+              onClick={() => setSelectedSessionPath(file.path)}
+              className={`text-[10px] px-2 py-1 rounded border whitespace-nowrap transition-colors ${(activeSessionFile && activeSessionFile.path === file.path)
+                  ? 'bg-purple-900/30 text-purple-300 border-purple-500/50'
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                }`}
+            >
+              {file.path.split('/').pop()?.replace('session_', '').replace('.md', '')}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-6 custom-scrollbar">

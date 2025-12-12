@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
     Activity,
     Radio,
@@ -8,7 +8,11 @@ import {
     Cpu,
     Signal,
     Terminal,
-    Clock
+    Clock,
+    Globe,
+    ExternalLink,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { ChatMessage, AstrolabeState } from '@/types';
 
@@ -24,6 +28,9 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     virtualFiles
 }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const [urlPath, setUrlPath] = useState('/');
+    const [iframeSrc, setIframeSrc] = useState('http://localhost:3000');
+    const [showRoadmap, setShowRoadmap] = useState(true);
 
     // Auto-scroll to bottom of log
     useEffect(() => {
@@ -80,55 +87,96 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             </div>
 
             {/* 3. THE LIVE MIRROR (PREVIEW) */}
-            <div className="flex-1 flex flex-col min-h-0 relative bg-black group">
-                <div className="absolute top-3 right-3 z-10 flex gap-2">
-                    <button
-                        onClick={() => {
-                            const iframe = document.getElementById('vessel-preview') as HTMLIFrameElement;
-                            if (iframe) iframe.src = iframe.src;
-                        }}
-                        className="bg-slate-900/80 hover:bg-indigo-600 text-white p-2 rounded-full border border-slate-700 transition-all shadow-lg backdrop-blur-sm"
-                        title="Refresh Signal"
-                    >
-                        <Activity className="w-4 h-4" />
-                    </button>
-                </div>
+            <div className="flex-1 flex flex-col min-h-0 bg-black group">
 
-                {/* FUTURE PLAN HUD OVERLAY */}
-                <div className="absolute bottom-6 left-6 z-10 max-w-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg p-4 shadow-2xl">
-                        <div className="flex items-center gap-2 mb-3 border-b border-slate-800 pb-2">
-                            <MapIcon className="w-4 h-4 text-indigo-400" />
-                            <span className="text-xs font-bold text-slate-100 tracking-widest uppercase">Project Roadmap</span>
-                        </div>
-                        <div className="space-y-3">
-                            <div className="relative pl-4 border-l-2 border-emerald-500">
-                                <div className="text-[10px] text-emerald-400 font-mono mb-0.5">CURRENT PHASE</div>
-                                <div className="text-sm font-medium text-slate-200">{astrolabe.phase.split(':')[1] || astrolabe.phase}</div>
-                                <div className="text-xs text-slate-400 mt-1">{astrolabe.bearing}</div>
-                            </div>
-
-                            <div className="relative pl-4 border-l-2 border-indigo-500/30">
-                                <div className="text-[10px] text-indigo-400/70 font-mono mb-0.5">NEXT HORIZON</div>
-                                <div className="text-sm font-medium text-slate-400">Phase 13: The Awakening</div>
-                                <div className="text-xs text-slate-500 mt-1">Integrate Poetic Brain as primary interface.</div>
-                            </div>
-
-                            <div className="relative pl-4 border-l-2 border-slate-700/30">
-                                <div className="text-[10px] text-slate-500 font-mono mb-0.5">LONG TERM</div>
-                                <div className="text-sm font-medium text-slate-500">Phase 14: Sovereignty</div>
-                                <div className="text-xs text-slate-600 mt-1">Full autonomous operation.</div>
-                            </div>
-                        </div>
+                {/* NAVIGATION BAR */}
+                <div className="h-10 border-b border-slate-800 bg-slate-900/80 flex items-center px-4 gap-3 shrink-0 backdrop-blur-sm z-20">
+                    <div className="flex items-center gap-2 text-slate-500">
+                        <Globe className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-mono hidden sm:inline opacity-70">LOCALHOST:3000</span>
+                    </div>
+                    <div className="flex-1 relative group/input">
+                        <input
+                            type="text"
+                            value={urlPath}
+                            onChange={(e) => setUrlPath(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    setIframeSrc(`http://localhost:3000${urlPath}`);
+                                }
+                            }}
+                            className="w-full bg-slate-950/50 border border-slate-800 text-slate-300 text-xs px-2 py-1 rounded-sm font-mono focus:border-indigo-500/50 focus:bg-slate-950 outline-none transition-all placeholder-slate-700"
+                            placeholder="/"
+                        />
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setShowRoadmap(!showRoadmap)}
+                            className={`p-1.5 rounded transition-colors ${showRoadmap ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+                            title={showRoadmap ? "Hide Roadmap" : "Show Roadmap"}
+                        >
+                            {showRoadmap ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        </button>
+                        <div className="w-px h-3 bg-slate-800 mx-1"></div>
+                        <button
+                            onClick={() => {
+                                const iframe = document.getElementById('vessel-preview') as HTMLIFrameElement;
+                                if (iframe) iframe.src = iframe.src;
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800/50 rounded transition-colors"
+                            title="Refresh Signal"
+                        >
+                            <Activity className="w-3.5 h-3.5" />
+                        </button>
+                        <a
+                            href={iframeSrc}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800/50 rounded transition-colors"
+                            title="Open in New Tab"
+                        >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                     </div>
                 </div>
 
-                <iframe
-                    id="vessel-preview"
-                    src="http://localhost:3001"
-                    className="w-full h-full border-0"
-                    title="Vessel Preview"
-                />
+                <div className="flex-1 relative min-h-0">
+                    {/* FUTURE PLAN HUD OVERLAY */}
+                    <div className={`absolute bottom-6 left-6 z-10 max-w-sm pointer-events-none transition-opacity duration-300 ${showRoadmap ? 'opacity-100' : 'opacity-0'}`}>
+                        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg p-4 shadow-2xl">
+                            <div className="flex items-center gap-2 mb-3 border-b border-slate-800 pb-2">
+                                <MapIcon className="w-4 h-4 text-indigo-400" />
+                                <span className="text-xs font-bold text-slate-100 tracking-widest uppercase">Project Roadmap</span>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="relative pl-4 border-l-2 border-emerald-500">
+                                    <div className="text-[10px] text-emerald-400 font-mono mb-0.5">CURRENT PHASE</div>
+                                    <div className="text-sm font-medium text-slate-200">{astrolabe.phase.split(':')[1] || astrolabe.phase}</div>
+                                    <div className="text-xs text-slate-400 mt-1">{astrolabe.bearing}</div>
+                                </div>
+
+                                <div className="relative pl-4 border-l-2 border-indigo-500/30">
+                                    <div className="text-[10px] text-indigo-400/70 font-mono mb-0.5">NEXT HORIZON</div>
+                                    <div className="text-sm font-medium text-slate-400">Phase 13: The Awakening</div>
+                                    <div className="text-xs text-slate-500 mt-1">Integrate Poetic Brain as primary interface.</div>
+                                </div>
+
+                                <div className="relative pl-4 border-l-2 border-slate-700/30">
+                                    <div className="text-[10px] text-slate-500 font-mono mb-0.5">LONG TERM</div>
+                                    <div className="text-sm font-medium text-slate-500">Phase 14: Sovereignty</div>
+                                    <div className="text-xs text-slate-600 mt-1">Full autonomous operation.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <iframe
+                        id="vessel-preview"
+                        src={iframeSrc}
+                        className="w-full h-full border-0 bg-white"
+                        title="Vessel Preview"
+                    />
+                </div>
             </div>
 
             {/* 4. FOOTER STATS */}

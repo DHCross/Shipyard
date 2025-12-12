@@ -23,7 +23,7 @@ export async function POST(request: Request) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: model || 'llama-3.1-sonar-small-128k-online',
+                model: model || 'llama-3.1-sonar-large-128k-online',
                 messages: messages || [
                     { role: 'system', content: 'You are the Oracle.' },
                     { role: 'user', content: 'Ping.' }

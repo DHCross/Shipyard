@@ -85,12 +85,14 @@ const ShipyardBridge: React.FC = () => {
     // Astrolabe State (The Compass) - Lifted to App level for persistence
     const [astrolabe, setAstrolabe] = useState<AstrolabeState>({
         phase: "Phase 12: Oracle's Path",
-        horizon: "Connect Sensor Array to Perplexity",
-        bearing: "Integrate /api/oracle",
+        horizon: "Phase 13: The Awakening",
+        bearing: "Integrate Poetic Brain as primary interface",
         tasks: [
             { description: "Secure internal route /api/oracle", status: 'complete' },
             { description: "Update RequestPanel Sensors", status: 'complete' },
-            { description: "Verify Oracle Connection", status: 'active' },
+            { description: "Verify Oracle Connection (Poetic Brain)", status: 'complete' },
+            { description: "Verify Astrology Connection (Math Brain)", status: 'complete' },
+            { description: "Draft Session Summary Script", status: 'active' },
         ],
         status: 'calibrated'
     });
@@ -99,10 +101,23 @@ const ShipyardBridge: React.FC = () => {
     const generateCaptainReport = (files: VirtualFile[]) => {
         // Look for README.md as the new Manifest source of truth
         const manifest = files.find(f => f.path === 'README.md') || files.find(f => f.path === 'VESSEL_MANIFEST.md');
+        const changelog = files.find(f => f.path.toLowerCase().includes('changelog'));
+
         let summary = "The Shipwright is online.\n\nI have detected the 'Constitutional Documents' in the Drydock.\nMy role is to build the machine (The Vessel) that Raven (The Pilot) will fly.";
 
         if (manifest) {
-            summary = `**CAPTAIN'S REPORT**\n\nThe Vessel Manifest (${manifest.path}) is loaded. The Astrolabe is calibrated. I await your command to continue the build.`;
+            summary = `**CAPTAIN'S REPORT**\n\nThe Vessel Manifest (${manifest.path}) is loaded.`;
+
+            if (changelog) {
+                summary += `\nChangelog (${changelog.path}) detected.`;
+            }
+
+            const roadmap = files.find(f => f.path.toLowerCase().includes('roadmap'));
+            if (roadmap) {
+                summary += `\nProject Roadmap (${roadmap.path}) detected.`;
+            }
+
+            summary += `\n\nThe Astrolabe is calibrated. I await your command to continue the build.`;
         }
         return summary;
     };
@@ -210,7 +225,7 @@ const ShipyardBridge: React.FC = () => {
                 duration: 0,
                 hint: "Check CORS policies if calling external APIs from the browser."
             };
-            setFetchedData(result);
+            setFetchedData(errorResult);
             if (activeTab === TabView.CONFIG) {
                 setActiveTab(TabView.RESPONSE);
             }
@@ -356,14 +371,39 @@ const ShipyardBridge: React.FC = () => {
                             />
                         )}
                         {activeTab === TabView.RESPONSE && (
-                            <CodemapViewer
-                                files={virtualFiles}
-                                onFileSelect={(path) => {
-                                    // Switch to Workspace and highlight the file
-                                    setActiveTab(TabView.WORKSPACE);
-                                    // Could add scroll-to-file logic here later
-                                }}
-                            />
+                            <div className="h-full flex flex-col relative">
+                                {fetchedData ? (
+                                    <div className="absolute inset-0 z-20 bg-slate-900 flex flex-col">
+                                        <div className="flex items-center justify-between p-2 border-b border-slate-800 bg-slate-950/50">
+                                            <div className="flex items-center space-x-2">
+                                                <span className={`w-2 h-2 rounded-full ${fetchedData.status >= 200 && fetchedData.status < 300 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                                <span className="text-xs font-mono text-slate-300">
+                                                    STATUS: {fetchedData.status} {fetchedData.statusText}
+                                                    <span className="text-slate-600 ml-2">({fetchedData.duration}ms)</span>
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => setFetchedData(null)}
+                                                className="text-xs text-slate-500 hover:text-white transition-colors"
+                                            >
+                                                CLOSE DATA
+                                            </button>
+                                        </div>
+                                        <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+                                            <pre className="text-xs font-mono text-emerald-300 whitespace-pre-wrap leading-relaxed">
+                                                {JSON.stringify(fetchedData.data, null, 2)}
+                                            </pre>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <CodemapViewer
+                                        files={virtualFiles}
+                                        onFileSelect={(path) => {
+                                            setActiveTab(TabView.WORKSPACE);
+                                        }}
+                                    />
+                                )}
+                            </div>
                         )}
                         {activeTab === TabView.WORKSPACE && (
                             <WorkspaceViewer

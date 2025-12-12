@@ -43,7 +43,12 @@ const FileNode: React.FC<NodeProps> = ({ data }) => {
     return (
         <div
             className={`px-3 py-2 rounded-lg border-2 shadow-lg cursor-pointer hover:scale-105 transition-transform ${getStatusColor(data.status)}`}
-            onClick={() => data.onSelect && data.onSelect(data.path)}
+            onClick={() => {
+                if (data.onSelect) {
+                    const cleanPath = data.path.startsWith('vessel/') ? data.path.replace('vessel/', '') : data.path;
+                    data.onSelect(cleanPath);
+                }
+            }}
         >
             <Handle type="target" position={Position.Top} className="!bg-slate-500 !border-slate-400" />
             <div className="flex items-center space-x-2">
