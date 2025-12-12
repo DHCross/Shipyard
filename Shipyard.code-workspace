@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../WovenWebApp"
+		},
+		{
+			"path": "../RavenCalder_Corpus"
 		}
 	],
 	"settings": {}

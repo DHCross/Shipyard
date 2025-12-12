@@ -27,7 +27,7 @@ export default function Home() {
 
       {/* Footer / Coordinates */}
       <div className="absolute bottom-8 text-[10px] text-slate-700 font-mono flex space-x-4">
-        <span>PHASE: GENESIS</span>
+        <span>PHASE: AWAKENING</span>
         <span>LAT: 0.00</span>
         <span>LON: 0.00</span>
       </div>

@@ -18,3 +18,9 @@ tasks:
       - pkill -f "node server/relay.js" || true
       - task: kill-ports
       - echo "Shipyard systems halted."
+
+  log:
+    desc: Log a session summary to the Captain's Log
+    cmds:
+      - node vessel/log_session.js
+    interactive: true

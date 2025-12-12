@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { VirtualFile, ChatMessage } from '@/types';
-import { Scroll, Download, Activity, BookOpen, MessageSquare, FileText, Clock, Map as MapIcon, Terminal } from 'lucide-react';
+import { Scroll, Download, Activity, BookOpen, MessageSquare, FileText, Clock, Map as MapIcon, Terminal, Plus, Save, X, GitCommit, Sparkles } from 'lucide-react';
 
 interface ManifestViewerProps {
   files: VirtualFile[];
@@ -12,6 +12,13 @@ type LogTab = 'manifest' | 'changelog' | 'roadmap' | 'sessions';
 const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
   const [activeTab, setActiveTab] = useState<LogTab>('manifest');
   const [selectedSessionPath, setSelectedSessionPath] = useState<string | null>(null);
+
+  // New Log Entry State
+  const [isEditing, setIsEditing] = useState(false);
+  const [newLogTitle, setNewLogTitle] = useState('');
+  const [newLogContent, setNewLogContent] = useState('');
+  const [commitToGit, setCommitToGit] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const manifestFile = useMemo(() =>
     files.find(f => f.path === 'README.md'),
@@ -54,6 +61,35 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    }
+  };
+
+  const handleSaveLog = async () => {
+    if (!newLogTitle.trim() || !newLogContent.trim()) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/logger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newLogTitle, content: newLogContent, commit: commitToGit })
+      });
+
+      if (res.ok) {
+        setIsEditing(false);
+        setNewLogTitle('');
+        setNewLogContent('');
+        setCommitToGit(false);
+        // We rely on the parent polling to pick up the new file, or we could optimistically update if we had a method.
+        // For now, the Periscope interval in ShipyardBridge will detect it shortly.
+      } else {
+        alert('Failed to save log.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error saving log.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -120,6 +156,13 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
         <Scroll className="w-16 h-16 mb-4 stroke-1" />
         <p className="text-sm">No Manifest Found.</p>
         <p className="text-xs mt-2">Initialize the Vessel to create the log.</p>
+        {/* Allow creating a session log even if nothing else exists */}
+        <button
+          onClick={() => { setActiveTab('sessions'); setIsEditing(true); }}
+          className="mt-4 px-4 py-2 bg-slate-800 text-slate-300 rounded text-xs hover:bg-slate-700 transition"
+        >
+          Create First Log
+        </button>
       </div>
     );
   }
@@ -179,8 +222,7 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
         </button>
         <button
           onClick={() => setActiveTab('sessions')}
-          disabled={sessionFiles.length === 0}
-          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'sessions' ? 'text-purple-400 border-b-2 border-purple-500 bg-slate-800/50' : 'text-slate-500 hover:text-slate-300'} ${sessionFiles.length === 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
+          className={`px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'sessions' ? 'text-purple-400 border-b-2 border-purple-500 bg-slate-800/50' : 'text-slate-500 hover:text-slate-300'}`}
         >
           <Terminal className="w-3 h-3 inline-block mr-1" />
           Sessions
@@ -188,21 +230,31 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
       </div>
 
       {/* Session Browser Header */}
-      {activeTab === 'sessions' && sessionFiles.length > 0 && (
-        <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center space-x-2 overflow-x-auto scrollbar-hide">
-          <span className="text-[10px] uppercase font-bold text-slate-500 flex-shrink-0">Logs:</span>
-          {sessionFiles.map((file) => (
-            <button
-              key={file.path}
-              onClick={() => setSelectedSessionPath(file.path)}
-              className={`text-[10px] px-2 py-1 rounded border whitespace-nowrap transition-colors ${(activeSessionFile && activeSessionFile.path === file.path)
+      {activeTab === 'sessions' && (
+        <div className="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide flex-1 mr-4">
+            <span className="text-[10px] uppercase font-bold text-slate-500 flex-shrink-0">Logs:</span>
+            {sessionFiles.length === 0 && <span className="text-[10px] text-slate-600 italic">No logs yet.</span>}
+            {sessionFiles.map((file) => (
+              <button
+                key={file.path}
+                onClick={() => { setSelectedSessionPath(file.path); setIsEditing(false); }}
+                className={`text-[10px] px-2 py-1 rounded border whitespace-nowrap transition-colors ${(activeSessionFile && activeSessionFile.path === file.path && !isEditing)
                   ? 'bg-purple-900/30 text-purple-300 border-purple-500/50'
                   : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
-                }`}
-            >
-              {file.path.split('/').pop()?.replace('session_', '').replace('.md', '')}
-            </button>
-          ))}
+                  }`}
+              >
+                {file.path.split('/').pop()?.replace('session_', '').replace('.md', '')}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="flex items-center space-x-1 text-[10px] bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded transition-colors"
+          >
+            <Plus className="w-3 h-3" />
+            <span>New Entry</span>
+          </button>
         </div>
       )}
 
@@ -210,7 +262,56 @@ const ManifestViewer: React.FC<ManifestViewerProps> = ({ files, messages }) => {
       <div className="flex-1 overflow-auto p-6 custom-scrollbar">
         {activeFile ? (
           <div className="prose prose-invert prose-sm max-w-none">
-            {renderMarkdown(activeFile.content)}
+            {isEditing && activeTab === 'sessions' ? (
+              <div className="flex flex-col space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-purple-400 uppercase tracking-widest">New Log Entry</h3>
+                  <button onClick={() => setIsEditing(false)} className="text-slate-500 hover:text-slate-300"><X className="w-4 h-4" /></button>
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    placeholder="Session Title / Focus..."
+                    value={newLogTitle}
+                    onChange={(e) => setNewLogTitle(e.target.value)}
+                    className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                  <button
+                    onClick={() => setNewLogContent(`# Session Analysis\n**Focus**: ${newLogTitle || 'General Maintenance'}\n\n## Key Updates\n- \n\n## Next Steps\n- `)}
+                    title="Insert Template"
+                    className="bg-slate-800 text-slate-400 hover:text-purple-400 border border-slate-700 rounded px-3 transition-colors"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                  </button>
+                </div>
+                <textarea
+                  placeholder="Only the Captain's thoughts remain..."
+                  value={newLogContent}
+                  onChange={(e) => setNewLogContent(e.target.value)}
+                  className="w-full h-64 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500 transition-colors font-mono"
+                />
+
+                <div className="flex items-center justify-between pt-2">
+                  <label className="flex items-center space-x-2 cursor-pointer group">
+                    <div className={`w-4 h-4 border rounded transition-colors flex items-center justify-center ${commitToGit ? 'bg-purple-600 border-purple-600' : 'border-slate-600 group-hover:border-slate-500'}`}>
+                      {commitToGit && <GitCommit className="w-3 h-3 text-white" />}
+                    </div>
+                    <input type="checkbox" checked={commitToGit} onChange={e => setCommitToGit(e.target.checked)} className="hidden" />
+                    <span className={`text-xs ${commitToGit ? 'text-purple-400' : 'text-slate-500 group-hover:text-slate-400'}`}>Commit Changes to Shipyard</span>
+                  </label>
+                  <button
+                    onClick={handleSaveLog}
+                    disabled={isSaving || !newLogTitle || !newLogContent}
+                    className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded transition-colors"
+                  >
+                    {isSaving ? <Activity className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    <span>Save to Disk</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              renderMarkdown(activeFile.content)
+            )}
           </div>
         ) : (
           <div className="text-center text-slate-600 py-10">
