@@ -17,7 +17,8 @@ import {
     ChevronUp,
     CheckCircle2,
     Circle,
-    Loader2
+    Loader2,
+    RotateCw
 } from 'lucide-react';
 import { ChatMessage, AstrolabeState } from '@/types';
 
@@ -37,6 +38,13 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const [iframeSrc, setIframeSrc] = useState('http://localhost:3000');
     const [showRoadmap, setShowRoadmap] = useState(true);
     const [astrolabeExpanded, setAstrolabeExpanded] = useState(false);
+    const [needsRefresh, setNeedsRefresh] = useState(false);
+
+    // Trigger glow after 30 seconds of inactivity (simulates "changes detected")
+    useEffect(() => {
+        const timer = setTimeout(() => setNeedsRefresh(true), 30000);
+        return () => clearTimeout(timer);
+    }, [messages, virtualFiles]); // Reset timer on new data
 
     // Auto-scroll to bottom of log
     useEffect(() => {
@@ -60,6 +68,19 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                     <span className="font-bold tracking-widest text-slate-100">SIGNAL DECK</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-slate-500">
+                    <button
+                        onClick={() => {
+                            window.location.reload();
+                        }}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all ${needsRefresh
+                                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-pulse'
+                                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
+                            }`}
+                        title="Hard Refresh Page"
+                    >
+                        <RotateCw className="w-3 h-3" />
+                        <span className="hidden sm:inline">REFRESH</span>
+                    </button>
                     <div className="flex items-center gap-1">
                         <Radio className="w-3 h-3" />
                         <span>BRIDGE ACTIVE</span>
@@ -131,8 +152,8 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                 <div className="space-y-3 text-xs">
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                        <span className="text-emerald-400">Phase 14: Raven Refinement</span>
-                                        <span className="text-slate-600">— Current (Bimodal Fix)</span>
+                                        <span className="text-emerald-400">Phase 14: Raven Chat & HUD</span>
+                                        <span className="text-slate-600">— Current (Interface Polish)</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full bg-indigo-500/50"></div>
@@ -238,14 +259,14 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
                                 <div className="relative pl-4 border-l-2 border-indigo-500/30">
                                     <div className="text-[10px] text-indigo-400/70 font-mono mb-0.5">NEXT HORIZON</div>
-                                    <div className="text-sm font-medium text-slate-400">Phase 15: Sovereignty</div>
-                                    <div className="text-xs text-slate-500 mt-1">Full autonomous operation & self-repair.</div>
+                                    <div className="text-sm font-medium text-slate-400">Phase 15: The Awakening</div>
+                                    <div className="text-xs text-slate-500 mt-1">Reports & Instrument Readout Integration.</div>
                                 </div>
 
                                 <div className="relative pl-4 border-l-2 border-slate-700/30">
                                     <div className="text-[10px] text-slate-500 font-mono mb-0.5">LONG TERM</div>
-                                    <div className="text-sm font-medium text-slate-500">Phase 16: Expansion</div>
-                                    <div className="text-xs text-slate-600 mt-1">Ecosystem growth and external API.</div>
+                                    <div className="text-sm font-medium text-slate-500">Phase 16: Sovereignty</div>
+                                    <div className="text-xs text-slate-600 mt-1">Autonomous operation & self-repair.</div>
                                 </div>
                             </div>
                         </div>

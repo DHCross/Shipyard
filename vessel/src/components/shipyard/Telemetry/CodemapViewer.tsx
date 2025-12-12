@@ -20,44 +20,63 @@ interface CodemapViewerProps {
     onFileSelect: (path: string) => void;
 }
 
-// Custom Node Component
+// Custom Node Component with enhanced visuals
 const FileNode: React.FC<NodeProps> = ({ data }) => {
     const getIcon = (path: string) => {
         if (path.endsWith('.tsx') || path.endsWith('.ts')) return <FileCode className="w-4 h-4 text-indigo-400" />;
         if (path.endsWith('.md')) return <FileText className="w-4 h-4 text-emerald-400" />;
         if (path.endsWith('.json')) return <FileJson className="w-4 h-4 text-amber-400" />;
+        if (path.endsWith('.css')) return <Cog className="w-4 h-4 text-pink-400" />;
         if (path.includes('/')) return <Folder className="w-4 h-4 text-slate-400" />;
         return <Cog className="w-4 h-4 text-slate-400" />;
     };
 
-    const getStatusColor = (status: string) => {
+    // Color-coding by file type (border + glow)
+    const getTypeStyle = (path: string) => {
+        if (path.endsWith('.tsx') || path.endsWith('.ts')) {
+            return 'border-indigo-500 bg-indigo-950/60 shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)]';
+        }
+        if (path.endsWith('.md')) {
+            return 'border-emerald-500 bg-emerald-950/60 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)]';
+        }
+        if (path.endsWith('.json')) {
+            return 'border-amber-500 bg-amber-950/60 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:shadow-[0_0_25px_rgba(245,158,11,0.5)]';
+        }
+        if (path.endsWith('.css')) {
+            return 'border-pink-500 bg-pink-950/60 shadow-[0_0_15px_rgba(236,72,153,0.3)] hover:shadow-[0_0_25px_rgba(236,72,153,0.5)]';
+        }
+        return 'border-slate-600 bg-slate-900/60 shadow-[0_0_10px_rgba(100,116,139,0.2)] hover:shadow-[0_0_15px_rgba(100,116,139,0.4)]';
+    };
+
+    const getStatusIndicator = (status: string) => {
         switch (status) {
-            case 'complete': return 'border-emerald-500 bg-emerald-950/50';
-            case 'in-progress': return 'border-amber-500 bg-amber-950/50 animate-pulse';
-            case 'planned': return 'border-slate-600 bg-slate-900/50';
-            case 'error': return 'border-red-500 bg-red-950/50';
-            default: return 'border-indigo-500 bg-indigo-950/50';
+            case 'complete': return <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />;
+            case 'in-progress': return <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />;
+            case 'error': return <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" />;
+            default: return null;
         }
     };
 
     return (
         <div
-            className={`px-3 py-2 rounded-lg border-2 shadow-lg cursor-pointer hover:scale-105 transition-transform ${getStatusColor(data.status)}`}
+            className={`relative px-4 py-2.5 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-105 ${getTypeStyle(data.path)}`}
             onClick={() => {
                 if (data.onSelect) {
                     const cleanPath = data.path.startsWith('vessel/') ? data.path.replace('vessel/', '') : data.path;
                     data.onSelect(cleanPath);
                 }
             }}
+            title={data.path} // Full path tooltip
         >
-            <Handle type="target" position={Position.Top} className="!bg-slate-500 !border-slate-400" />
+            <Handle type="target" position={Position.Top} className="!bg-slate-500 !border-slate-400 !w-2 !h-2" />
+            {getStatusIndicator(data.status)}
             <div className="flex items-center space-x-2">
                 {getIcon(data.path)}
-                <span className="text-xs font-mono text-slate-200 truncate max-w-[120px]">
+                <span className="text-xs font-mono text-slate-200 truncate max-w-[140px]">
                     {data.label}
                 </span>
             </div>
-            <Handle type="source" position={Position.Bottom} className="!bg-slate-500 !border-slate-400" />
+            <Handle type="source" position={Position.Bottom} className="!bg-slate-500 !border-slate-400 !w-2 !h-2" />
         </div>
     );
 };
@@ -115,8 +134,8 @@ export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelec
                         id: `${children[0]}-${children[i]}`,
                         source: children[0],
                         target: children[i],
-                        animated: false,
-                        style: { stroke: '#475569', strokeWidth: 1 },
+                        animated: true, // Animated for "alive" feel
+                        style: { stroke: '#06b6d4', strokeWidth: 1.5 }, // Cyan for visibility
                     });
                 }
             }
@@ -162,14 +181,15 @@ export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelec
                 <Controls className="!bg-slate-800 !border-slate-700 !rounded-lg [&>button]:!bg-slate-700 [&>button]:!border-slate-600 [&>button]:!text-slate-300 [&>button:hover]:!bg-slate-600" />
                 <MiniMap
                     nodeColor={(node) => {
-                        switch (node.data?.status) {
-                            case 'complete': return '#10b981';
-                            case 'in-progress': return '#f59e0b';
-                            case 'error': return '#ef4444';
-                            default: return '#6366f1';
-                        }
+                        // Color by file type for consistency
+                        const path = node.data?.path || '';
+                        if (path.endsWith('.tsx') || path.endsWith('.ts')) return '#6366f1'; // indigo
+                        if (path.endsWith('.md')) return '#10b981'; // emerald
+                        if (path.endsWith('.json')) return '#f59e0b'; // amber
+                        if (path.endsWith('.css')) return '#ec4899'; // pink
+                        return '#64748b'; // slate
                     }}
-                    className="!bg-slate-900 !border-slate-700"
+                    className="!bg-slate-900 !border-slate-700 !rounded-lg"
                 />
             </ReactFlow>
         </div>
