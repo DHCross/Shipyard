@@ -8,18 +8,18 @@ import { recordPing, PingResponse, CheckpointType } from './ResonanceMeter';
 // ============================================================
 
 interface PingFeedbackProps {
-    messageId: string;
-    onFeedback: (messageId: string, response: PingResponse, note?: string) => void;
-    disabled?: boolean;
-    checkpointType?: CheckpointType;
+  messageId: string;
+  onFeedback: (messageId: string, response: PingResponse, note?: string) => void;
+  disabled?: boolean;
+  checkpointType?: CheckpointType;
 }
 
 interface ResonanceOption {
-    id: PingResponse;
-    label: string;
-    caption: string;
-    icon: string;
-    accentClasses: string;
+  id: PingResponse;
+  label: string;
+  caption: string;
+  icon: string;
+  accentClasses: string;
 }
 
 // ============================================================
@@ -27,42 +27,43 @@ interface ResonanceOption {
 // ============================================================
 
 const RESONANCE_OPTIONS: ResonanceOption[] = [
-    {
-        id: 'yes',
-        label: 'Strong Resonance',
-        caption: 'Lands clearly and feels vivid right now.',
-        icon: '✓',
-        accentClasses: 'border-emerald-400/70 bg-emerald-500/10 text-emerald-200',
-    },
-    {
-        id: 'maybe',
-        label: 'Partial Resonance',
-        caption: 'Some of it fits; tone or timing feels slightly off.',
-        icon: '~',
-        accentClasses: 'border-amber-400/70 bg-amber-500/10 text-amber-200',
-    },
-    {
-        id: 'no',
-        label: 'No Resonance',
-        caption: "Doesn't connect with what's happening right now.",
-        icon: '✗',
-        accentClasses: 'border-slate-500/70 bg-slate-800/60 text-slate-200',
-    },
+  {
+    id: 'yes',
+    label: 'Strong Resonance',
+    caption: 'Lands clearly and feels vivid right now.',
+    icon: '✓',
+    accentClasses: 'border-emerald-400/70 bg-emerald-500/10 text-emerald-200',
+  },
+  {
+    id: 'maybe',
+    label: 'Partial Resonance',
+    caption: 'Some of it fits; tone or timing feels slightly off.',
+    icon: '~',
+    accentClasses: 'border-amber-400/70 bg-amber-500/10 text-amber-200',
+  },
+  {
+    id: 'no',
+    label: 'No Resonance',
+    caption: "Doesn't connect with what's happening right now.",
+    icon: '✗',
+    accentClasses: 'border-slate-500/70 bg-slate-800/60 text-slate-200',
+  },
 ];
 
+// CRITICAL: No retrofitting language - a miss does NOT change the map
 const ACKNOWLEDGEMENTS: Record<PingResponse, string> = {
-    yes: 'Noted — this one resonated strongly.',
-    maybe: "Logged as partial resonance. I'll keep refining the mirror.",
-    no: "Marked as no resonance. I'll adjust course on the next pass.",
-    unclear: "Logged as unclear. I'll restate it with plainer language.",
+  yes: 'Noted — this one resonated strongly.',
+  maybe: "Logged as partial resonance. That stands as partial data.",
+  no: "Logged as no resonance. A miss is logged as a miss.",
+  unclear: "Logged as unclear. That stands as null data.",
 };
 
 const CHECKPOINT_PROMPTS: Record<CheckpointType, string> = {
-    hook: 'How does this recognition land for you?',
-    vector: 'Does this hidden push or counterweight echo your experience?',
-    aspect: 'Does this high-voltage pattern resonate with what you feel?',
-    repair: 'Does this repair feel true in your system?',
-    general: 'How does this one land for you?',
+  hook: 'How does this recognition land for you?',
+  vector: 'Does this hidden push or counterweight echo your experience?',
+  aspect: 'Does this high-voltage pattern resonate with what you feel?',
+  repair: 'Does this repair feel true in your system?',
+  general: 'How does this one land for you?',
 };
 
 // ============================================================
@@ -70,42 +71,42 @@ const CHECKPOINT_PROMPTS: Record<CheckpointType, string> = {
 // ============================================================
 
 const PingFeedback: React.FC<PingFeedbackProps> = ({
-    messageId,
-    onFeedback,
-    disabled = false,
-    checkpointType = 'general',
+  messageId,
+  onFeedback,
+  disabled = false,
+  checkpointType = 'general',
 }) => {
-    const [selectedResponse, setSelectedResponse] = useState<PingResponse | null>(null);
-    const [note, setNote] = useState('');
-    const [noteTouched, setNoteTouched] = useState(false);
+  const [selectedResponse, setSelectedResponse] = useState<PingResponse | null>(null);
+  const [note, setNote] = useState('');
+  const [noteTouched, setNoteTouched] = useState(false);
 
-    const handleSelect = useCallback((response: PingResponse) => {
-        if (disabled) return;
-        setSelectedResponse(response);
-        const noteValue = response === 'no' ? note.trim() : undefined;
-        onFeedback(messageId, response, noteValue);
-        if (response !== 'no') {
-            setNote('');
-            setNoteTouched(false);
-        }
-    }, [disabled, messageId, note, onFeedback]);
+  const handleSelect = useCallback((response: PingResponse) => {
+    if (disabled) return;
+    setSelectedResponse(response);
+    const noteValue = response === 'no' ? note.trim() : undefined;
+    onFeedback(messageId, response, noteValue);
+    if (response !== 'no') {
+      setNote('');
+      setNoteTouched(false);
+    }
+  }, [disabled, messageId, note, onFeedback]);
 
-    const handleNoteBlur = useCallback(() => {
-        setNoteTouched(true);
-        if (selectedResponse === 'no') {
-            onFeedback(messageId, 'no', note.trim() || undefined);
-        }
-    }, [messageId, note, onFeedback, selectedResponse]);
+  const handleNoteBlur = useCallback(() => {
+    setNoteTouched(true);
+    if (selectedResponse === 'no') {
+      onFeedback(messageId, 'no', note.trim() || undefined);
+    }
+  }, [messageId, note, onFeedback, selectedResponse]);
 
-    // Already submitted
-    if (disabled || selectedResponse) {
-        return (
-            <div className="ping-feedback submitted">
-                <span className="submitted-icon">✓</span>
-                <span className="submitted-text">
-                    {selectedResponse ? ACKNOWLEDGEMENTS[selectedResponse] : 'Resonance recorded.'}
-                </span>
-                <style jsx>{`
+  // Already submitted
+  if (disabled || selectedResponse) {
+    return (
+      <div className="ping-feedback submitted">
+        <span className="submitted-icon">✓</span>
+        <span className="submitted-text">
+          {selectedResponse ? ACKNOWLEDGEMENTS[selectedResponse] : 'Resonance recorded.'}
+        </span>
+        <style jsx>{`
           .ping-feedback.submitted {
             display: flex;
             align-items: center;
@@ -124,50 +125,50 @@ const PingFeedback: React.FC<PingFeedbackProps> = ({
             font-style: italic;
           }
         `}</style>
-            </div>
-        );
-    }
+      </div>
+    );
+  }
 
-    return (
-        <div className="ping-feedback">
-            <p className="prompt-text">{CHECKPOINT_PROMPTS[checkpointType]}</p>
+  return (
+    <div className="ping-feedback">
+      <p className="prompt-text">{CHECKPOINT_PROMPTS[checkpointType]}</p>
 
-            <div className="options-row">
-                {RESONANCE_OPTIONS.map((option) => (
-                    <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => handleSelect(option.id)}
-                        className={`option-btn ${option.accentClasses}`}
-                        title={option.caption}
-                    >
-                        <span className="option-icon">{option.icon}</span>
-                        <span className="option-label">{option.label}</span>
-                    </button>
-                ))}
-            </div>
+      <div className="options-row">
+        {RESONANCE_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => handleSelect(option.id)}
+            className={`option-btn ${option.accentClasses}`}
+            title={option.caption}
+          >
+            <span className="option-icon">{option.icon}</span>
+            <span className="option-label">{option.label}</span>
+          </button>
+        ))}
+      </div>
 
-            {selectedResponse === 'no' && (
-                <div className="note-section">
-                    <label htmlFor={`note-${messageId}`} className="note-label">
-                        What missed the mark?
-                    </label>
-                    <textarea
-                        id={`note-${messageId}`}
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        onBlur={handleNoteBlur}
-                        rows={2}
-                        placeholder="Optional: share what didn't land so Raven can refine..."
-                        className="note-input"
-                    />
-                    {noteTouched && !note.trim() && (
-                        <p className="note-hint">Skipping the note is fine — the tag is already recorded.</p>
-                    )}
-                </div>
-            )}
+      {selectedResponse === 'no' && (
+        <div className="note-section">
+          <label htmlFor={`note-${messageId}`} className="note-label">
+            What missed the mark?
+          </label>
+          <textarea
+            id={`note-${messageId}`}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            onBlur={handleNoteBlur}
+            rows={2}
+            placeholder="Optional: share what didn't land (this won't change the map, just logged)..."
+            className="note-input"
+          />
+          {noteTouched && !note.trim() && (
+            <p className="note-hint">Skipping the note is fine — the tag is already recorded.</p>
+          )}
+        </div>
+      )}
 
-            <style jsx>{`
+      <style jsx>{`
         .ping-feedback {
           padding: 12px 14px;
           background: rgba(15, 23, 42, 0.8);
@@ -256,8 +257,8 @@ const PingFeedback: React.FC<PingFeedbackProps> = ({
           margin-top: 4px;
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 };
 
 export { PingFeedback };

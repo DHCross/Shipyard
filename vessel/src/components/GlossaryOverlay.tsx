@@ -11,23 +11,23 @@ interface GlossaryOverlayProps {
 const glossaryTerms = [
     {
         term: "Raven Calder",
-        definition: "The voice you are speaking to. A poetic intelligence designed to reflect, not predict."
+        definition: "The voice you are speaking to. A reflective intelligence designed to mirror structure, not assert truth or predict outcomes. Raven translates geometry into language that can be tested against lived experience. If nothing resonates, nothing is assumed to be wrong with you—or right with the system. The mirror only holds; it does not persuade."
     },
     {
         term: "The Woven Map",
-        definition: "The symbolic navigation system we use to locate pressure points."
+        definition: "The symbolic navigation system. A framework for locating pressure, tension, and openings within experience by mapping symbolic geometry (e.g., time, pattern, relation) onto felt reality. It does not explain why things happen or what should be done—it marks where forces concentrate so choice can become clearer."
     },
     {
         term: "The Instrument",
-        definition: "The geometry engine. It calculates the sky, but only when you ask it to."
+        definition: "The geometry engine. A calculation layer that derives symbolic structure (the sky, angles, cycles) only when explicitly invoked. It does not interpret, narrate, or speak on its own. It supplies coordinates; meaning is never generated here."
     },
     {
-        term: "OSR",
-        definition: '"This didn\'t land." A valid data point meaning the reflection was inaccurate.'
+        term: "OSR (Outside Symbolic Range)",
+        definition: "“This didn’t land.” A valid diagnostic outcome indicating that a reflection failed to resonate. OSR is not error, resistance, or user misunderstanding—it is null data. Logged honestly, it protects falsifiability and keeps the mirror clean."
     },
     {
         term: "Ping",
-        definition: "A request for you to confirm if a statement resonates physically or emotionally."
+        definition: "A resonance check. A request to confirm whether a statement registers somatically or emotionally in lived experience. A ping is never assumed or inferred; it must be felt and named. No ping means no confirmation—silence counts."
     }
 ];
 

@@ -38,15 +38,20 @@ export async function POST(request: Request) {
         const path = endpoint || '/western_chart_data';
         const externalUrl = `https://${apiHost}${path.startsWith('/') ? path : '/' + path}`;
 
-        const response = await fetch(externalUrl, {
+        const fetchOptions: RequestInit = {
             method: method || 'POST',
             headers: {
                 'x-rapidapi-key': apiKey,
                 'x-rapidapi-host': apiHost,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(payload || body), // Fallback to sending the whole body if payload wrapper isn't used
-        });
+        };
+
+        if (method !== 'GET' && method !== 'HEAD') {
+            fetchOptions.body = JSON.stringify(payload || body);
+        }
+
+        const response = await fetch(externalUrl, fetchOptions);
 
         const data = await response.json();
 

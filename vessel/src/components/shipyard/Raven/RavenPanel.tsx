@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Sparkles, Feather, Moon, Sun, Map as MapIcon } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Feather, Moon, Sun, Map as MapIcon, Users, Save, CheckCircle } from 'lucide-react';
 import { GoogleGenAI, Content } from '@google/genai';
 import { ChatMessage, ApiConfig } from '@/types';
 import { HandshakeManager } from './HandshakeManager';
 import { AstrologyService } from '../../services/AstrologyService';
+import { InstrumentReadout } from './InstrumentReadout';
+import { ProfileVaultPanel } from './ProfileVaultPanel';
+import { useProfileVault } from './useProfileVault';
+import { BirthProfile, saveProfile } from '../../services/ProfileVault';
 
 interface RavenPanelProps {
     messages: ChatMessage[];
@@ -20,6 +24,12 @@ export const RavenPanel: React.FC<RavenPanelProps> = ({ messages, setMessages, a
     const [handshakeManager] = useState(() => new HandshakeManager());
     const [chartData, setChartData] = useState<any>(null);
 
+    // Profile Vault
+    const vault = useProfileVault();
+    const [showVault, setShowVault] = useState(false);
+    const [pendingSaveProfile, setPendingSaveProfile] = useState<BirthProfile | null>(null);
+    const [profileSaved, setProfileSaved] = useState(false);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -27,6 +37,57 @@ export const RavenPanel: React.FC<RavenPanelProps> = ({ messages, setMessages, a
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const calculateMetrics = (data: any) => {
+        if (!data) return { mag: 0, bias: 0, vol: 0 };
+
+        // Defensive parsing for V3 Natal Transits response
+        let items: any[] = [];
+        // Response might be { transits: [...] } or array or just object
+        if (Array.isArray(data)) items = data;
+        else if (data && Array.isArray(data.transits)) items = data.transits;
+        else if (data && typeof data === 'object') {
+            // Try to find any array property that looks like list of aspects/transits
+            const likelyArray = Object.values(data).find(val => Array.isArray(val) && val.length > 0 && typeof val[0] === 'object');
+            if (likelyArray) items = likelyArray as any[];
+        }
+
+        if (items.length === 0) return { mag: 1, bias: 0, vol: 1 }; // Return minimal activity rather than dead zero
+
+        let mag = 0;
+        let bias = 0;
+        let vol = 0;
+
+        items.forEach(item => {
+            // V3: transiting_planet, aspect_type, orb
+            const orb = item.orb !== undefined ? parseFloat(item.orb) : 3.0;
+            const planet = (item.transiting_planet || item.planet || '').toLowerCase();
+            const aspect = (item.aspect_type || '').toLowerCase();
+
+            // Magnitude: Weighted count of impacts
+            // Conjunctions/Oppositions count more
+            const impact = (aspect === 'conjunction' || aspect === 'opposition') ? 1.5 : 1.0;
+            const tightOrbBonus = orb < 1.5 ? 1 : 0;
+            mag += impact + tightOrbBonus;
+
+            // Bias: Expansion vs Contraction
+            if (['jupiter', 'sun', 'mars', 'uranus', 'north node'].some(s => planet.includes(s))) bias += 1;
+            if (['saturn', 'pluto', 'neptune', 'south node', 'chiron'].some(s => planet.includes(s))) bias -= 1;
+
+            // Volatility: Erratic energy
+            if (['uranus', 'mars', 'pluto'].some(s => planet.includes(s)) && orb < 2.0) vol += 2;
+            if (aspect === 'square') vol += 1;
+        });
+
+        // Normalize to 0-10 / -10 to 10
+        return {
+            mag: Math.min(10, Math.round(mag / 2)),
+            bias: Math.max(-10, Math.min(10, bias)), // Raw count ok for now
+            vol: Math.min(10, Math.round(vol / 2))
+        };
+    };
+
+    const [meterData, setMeterData] = useState({ mag: 0, bias: 0, vol: 0 });
 
     const handleSend = async () => {
         if (!input.trim()) return;
@@ -69,9 +130,22 @@ export const RavenPanel: React.FC<RavenPanelProps> = ({ messages, setMessages, a
 
                 if (result.status === 200) {
                     setChartData(result.data);
+                    const metrics = calculateMetrics(result.data);
+                    setMeterData(metrics);
+
+                    // Prepare profile for potential saving
+                    const profileCandidate = handshakeManager.toProfile(
+                        state.name || undefined,
+                        'self' // Default to self for first profile
+                    );
+                    if (profileCandidate) {
+                        setPendingSaveProfile(profileCandidate);
+                    }
+
                     systemInjection = `
 [SYSTEM: GEOMETRY ACQUIRED]
 The chart has been calculated.
+METRICS: Magnitude ${metrics.mag}, Bias ${metrics.bias}, Volatility ${metrics.vol}
 DATA: ${JSON.stringify(result.data).substring(0, 5000)}
 INSTRUCTION: Interpret this geometry for the user. Speak from the "Poetic Brain" persona. Do not list numbers. Weave a narrative.
 `;
@@ -144,9 +218,106 @@ INSTRUCTION: Interpret this geometry for the user. Speak from the "Poetic Brain"
         }
     };
 
+    const handleSaveProfile = () => {
+        if (pendingSaveProfile) {
+            saveProfile(pendingSaveProfile);
+            vault.refresh();
+            setProfileSaved(true);
+            setPendingSaveProfile(null);
+            setTimeout(() => setProfileSaved(false), 3000);
+        }
+    };
+
+    const handleLoadProfile = (profile: BirthProfile) => {
+        // Pre-fill handshake with loaded profile
+        handshakeManager.setName(profile.name);
+        handshakeManager.update([
+            { key: 'date', value: profile.birthDate, confidence: 1.0 },
+            { key: 'time', value: profile.birthTime, confidence: 1.0 },
+            { key: 'place', value: { name: profile.birthCity, lat: profile.latitude, lng: profile.longitude }, confidence: 1.0 },
+            { key: 'name', value: profile.name, confidence: 1.0 }
+        ]);
+        setShowVault(false);
+
+        // Add system message
+        setMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            role: 'system',
+            content: `📂 Loaded profile: ${profile.name} (${profile.birthDate})`,
+            timestamp: Date.now(),
+        }]);
+    };
+
     return (
         <div className="flex flex-col h-full bg-slate-950 font-serif">
-            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            {/* Vault Panel (Collapsible) */}
+            {showVault && (
+                <div className="absolute top-4 right-4 z-50 w-80 shadow-2xl animate-in slide-in-from-right-4 duration-300">
+                    <ProfileVaultPanel
+                        onClose={() => setShowVault(false)}
+                        onSelectProfile={handleLoadProfile}
+                    />
+                </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 relative">
+                {/* Header with Vault Toggle */}
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2 text-slate-600">
+                        <Feather className="w-4 h-4" />
+                        <span className="text-xs uppercase tracking-widest">Raven</span>
+                    </div>
+                    <button
+                        onClick={() => setShowVault(!showVault)}
+                        className={`p-2 rounded-lg transition-colors ${showVault ? 'bg-indigo-900/50 text-indigo-400' : 'hover:bg-slate-800 text-slate-500 hover:text-slate-300'}`}
+                        title="Profile Vault"
+                    >
+                        <Users className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Instrument Readout */}
+                {chartData && (
+                    <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-1000">
+                        <InstrumentReadout data={meterData} isLoading={false} />
+                    </div>
+                )}
+
+                {/* Save Profile Prompt */}
+                {pendingSaveProfile && !profileSaved && (
+                    <div className="bg-indigo-900/20 border border-indigo-800/30 rounded-lg p-4 flex items-center justify-between animate-in fade-in duration-500">
+                        <div className="flex items-center gap-3">
+                            <Save className="w-5 h-5 text-indigo-400" />
+                            <div>
+                                <p className="text-sm text-slate-200">Save this profile to your vault?</p>
+                                <p className="text-xs text-slate-500">{pendingSaveProfile.name || 'New Profile'} • {pendingSaveProfile.birthDate}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleSaveProfile}
+                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded transition-colors"
+                            >
+                                Save
+                            </button>
+                            <button
+                                onClick={() => setPendingSaveProfile(null)}
+                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded transition-colors"
+                            >
+                                Skip
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Profile Saved Confirmation */}
+                {profileSaved && (
+                    <div className="bg-green-900/20 border border-green-800/30 rounded-lg p-3 flex items-center gap-3 animate-in fade-in duration-300">
+                        <CheckCircle className="w-5 h-5 text-green-400" />
+                        <span className="text-sm text-green-300">Profile saved to vault</span>
+                    </div>
+                )}
+
                 {messages.map((msg) => (
                     <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         <div className="max-w-[80%]">
