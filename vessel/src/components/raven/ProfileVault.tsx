@@ -172,6 +172,8 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
 
     // ... (existing render logic)
 
+    if (!isOpen) return null;
+
     return (
         <div className="fixed inset-0 z-50 flex">
             {/* Backdrop */}

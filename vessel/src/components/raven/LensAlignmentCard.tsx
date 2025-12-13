@@ -10,6 +10,20 @@ interface City {
     timezone?: string;
 }
 
+function normalizeCity(raw: any): City | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const name = raw.name ?? raw.city ?? raw.city_name;
+    const country_code = raw.country_code ?? raw.country ?? raw.nation;
+    const latitude = raw.latitude ?? raw.lat;
+    const longitude = raw.longitude ?? raw.lng ?? raw.lon;
+    const timezone = raw.timezone ?? raw.tz_str ?? raw.tz;
+
+    if (typeof name !== 'string' || typeof country_code !== 'string') return null;
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') return null;
+
+    return { name, country_code, latitude, longitude, timezone };
+}
+
 interface LensAlignmentCardProps {
     onAlign: (chartData: any) => void;
     onCancel: () => void;
@@ -69,8 +83,20 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
                 });
 
                 const data = await response.json();
-                if (Array.isArray(data)) {
-                    setCityResults(data);
+
+                const candidates =
+                    Array.isArray(data) ? data :
+                        Array.isArray((data as any)?.data) ? (data as any).data :
+                            Array.isArray((data as any)?.results) ? (data as any).results :
+                                Array.isArray((data as any)?.cities) ? (data as any).cities :
+                                    [];
+
+                const normalized = candidates
+                    .map(normalizeCity)
+                    .filter((c: City | null): c is City => !!c);
+
+                if (normalized.length > 0) {
+                    setCityResults(normalized);
                     setShowResults(true);
                 } else {
                     setCityResults([]);
@@ -105,29 +131,40 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
             const [year, month, day] = date.split('-').map(Number);
             const [hour, minute] = time.split(':').map(Number);
 
+            // AstroAPI v3: prefer coordinates + timezone (and OMIT city/country_code)
+            // to avoid upstream re-geocoding overwriting exact coordinates.
+            const birth_data: any = {
+                year,
+                month,
+                day,
+                hour,
+                minute,
+                second: 0,
+            };
+
+            const hasCoords =
+                typeof selectedCity.latitude === 'number' &&
+                typeof selectedCity.longitude === 'number';
+            const tz = selectedCity.timezone;
+
+            if (hasCoords && typeof tz === 'string' && tz.length > 0) {
+                birth_data.latitude = selectedCity.latitude;
+                birth_data.longitude = selectedCity.longitude;
+                birth_data.timezone = tz;
+            } else {
+                birth_data.city = selectedCity.name;
+                birth_data.country_code = selectedCity.country_code;
+            }
+
             const payload = {
                 subject: {
                     name: name,
-                    birth_data: {
-                        year,
-                        month,
-                        day,
-                        hour,
-                        minute,
-                        city: selectedCity.name,
-                        country_code: selectedCity.country_code,
-                        latitude: selectedCity.latitude,
-                        longitude: selectedCity.longitude
-                    }
+                    birth_data,
                 },
-                options: {
-                    house_system: "P", // Placidus default
-                    zodiac_type: "Tropic",
-                    language: "en"
-                },
-                relationship_context: {
-                    intimacy_tier: intimacyTier,
-                    contact_state: contactState
+                // AstroAPI v3 (analysis/natal-report) expects report_options for tradition + language
+                report_options: {
+                    tradition: 'psychological',
+                    language: 'en'
                 }
             };
 
@@ -143,8 +180,17 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
 
             const data = await response.json();
 
-            if (data.error) {
-                throw new Error(data.error);
+            if (!response.ok) {
+                const msg =
+                    (data && (data.error || data.message || data.detail))
+                        ? String(data.error || data.message || data.detail)
+                        : `Upstream error (${response.status})`;
+                throw new Error(msg);
+            }
+
+            // Some upstream responses may be 200 but still signal failure.
+            if (data && (data.error || data.success === false)) {
+                throw new Error(String(data.error || 'Upstream returned success=false'));
             }
 
             // Store the aligned data for potential save
@@ -265,7 +311,7 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
                                 }
                             }}
                             onFocus={() => { if (cityResults.length > 0) setShowResults(true); }}
-                            placeholder="Search City..."
+                            placeholder="Search City, Country..."
                             className="w-full bg-black/40 border border-emerald-500/20 rounded px-9 py-2 text-sm text-emerald-100 placeholder:text-emerald-700/50 focus:outline-none focus:border-emerald-500/60 transition-colors font-serif"
                         />
                         {isSearching && (
@@ -290,61 +336,11 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
                     )}
                 </div>
 
-                {/* Relationship Context */}
-                <div className="space-y-3 pt-2 border-t border-emerald-500/10">
-                    <span className="text-[10px] uppercase tracking-wider text-emerald-400/50 font-mono">Relationship Context (Optional)</span>
-
-                    {/* Intimacy Tier */}
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase tracking-wider text-emerald-400/70 font-mono ml-1 flex items-center gap-1">
-                            <Heart className="w-3 h-3" /> Intimacy Tier
-                        </label>
-                        <select
-                            value={intimacyTier}
-                            onChange={(e) => setIntimacyTier(e.target.value)}
-                            className="w-full bg-black/40 border border-emerald-500/20 rounded px-3 py-2 text-sm text-emerald-100 focus:outline-none focus:border-emerald-500/60 transition-colors font-mono appearance-none cursor-pointer"
-                        >
-                            <option value="solo">Solo (Individual Chart)</option>
-                            <option value="platonic">Platonic Partners</option>
-                            <option value="fwb">Friends-with-Benefits</option>
-                            <option value="situationship">Situationship (Unclear/Unstable)</option>
-                            <option value="low_commitment">Low-Commitment Romantic/Sexual</option>
-                            <option value="committed_romantic_sexual">Committed Romantic + Sexual</option>
-                            <option value="committed_romantic_nonsexual">Committed Romantic, Non-Sexual</option>
-                            <option value="family_other">Family / Other Bond</option>
-                        </select>
-                    </div>
-
-                    {/* Contact State */}
-                    <div className="space-y-1">
-                        <label className="text-[10px] uppercase tracking-wider text-emerald-400/70 font-mono ml-1 flex items-center gap-1">
-                            <Zap className="w-3 h-3" /> Contact State
-                        </label>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setContactState('active')}
-                                className={`flex-1 px-3 py-2 rounded text-xs font-mono uppercase tracking-wider transition-all border ${contactState === 'active'
-                                    ? 'bg-emerald-600/30 border-emerald-400/60 text-emerald-100'
-                                    : 'bg-black/20 border-emerald-500/20 text-emerald-500/50 hover:border-emerald-500/40'
-                                    }`}
-                            >
-                                ⚡ Active (Live Contact)
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setContactState('latent')}
-                                className={`flex-1 px-3 py-2 rounded text-xs font-mono uppercase tracking-wider transition-all border ${contactState === 'latent'
-                                    ? 'bg-slate-600/30 border-slate-400/60 text-slate-100'
-                                    : 'bg-black/20 border-emerald-500/20 text-emerald-500/50 hover:border-emerald-500/40'
-                                    }`}
-                            >
-                                💤 Latent (Dormant)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
+                {/* Relationship Context Removed for Initial Alignment (Defaulting to Solo/Active) */}
+                {/* 
+                   Hidden to declutter "Lens Alignment". Relationship logic belongs in the Profile Vault 
+                   or a dedicated Synastry setup flow, not the initial birth data entry.
+                */}
                 {/* Error Message */}
                 {error && (
                     <div className="text-xs text-red-400 bg-red-950/20 p-2 rounded border border-red-500/20 text-center animate-pulse">
