@@ -104,9 +104,12 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
                 return;
             }
 
-            if (response.ok && data.profiles) {
-                setProfiles(data.profiles);
-                localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(data.profiles));
+
+            if (response.ok && (data.vault?.profiles || data.profiles)) {
+                // Support both new { vault: { profiles: [] } } and old { profiles: [] } structures
+                const fetchedProfiles = data.vault?.profiles || data.profiles;
+                setProfiles(fetchedProfiles);
+                localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(fetchedProfiles));
                 setSyncStatus('synced');
             }
         } catch (e) {
@@ -391,8 +394,8 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
                                 <User className="w-4 h-4 text-emerald-400" />
                                 <span className="text-xs font-mono text-emerald-200">{username}</span>
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${syncStatus === 'synced' ? 'bg-emerald-500/20 text-emerald-300' :
-                                        syncStatus === 'syncing' ? 'bg-amber-500/20 text-amber-300' :
-                                            'bg-slate-500/20 text-slate-400'
+                                    syncStatus === 'syncing' ? 'bg-amber-500/20 text-amber-300' :
+                                        'bg-slate-500/20 text-slate-400'
                                     }`}>
                                     {syncStatus === 'synced' ? '✓ Synced' : syncStatus === 'syncing' ? '↻ Syncing' : '⚡ Local'}
                                 </span>
