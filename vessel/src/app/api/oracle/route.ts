@@ -44,7 +44,7 @@ function stripCitations(text: string): string {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { model, messages } = body;
+        const { model, messages, chartContext } = body;
 
         // Use environment variable for the key
         const apiKey = process.env.PERPLEXITY_API_KEY || request.headers.get('x-perplexity-key');
@@ -62,25 +62,34 @@ export async function POST(request: Request) {
         // Ensure system message uses Raven's persona
         let processedMessages = messages || [];
 
-        // If first message is a system message, replace it with Raven's prompt
-        if (processedMessages.length > 0 && processedMessages[0].role === 'system') {
-            processedMessages = [
-                { role: 'system', content: ravenSystemPrompt },
-                ...processedMessages.slice(1)
-            ];
-        } else if (processedMessages.length === 0) {
-            // Default messages for ping
-            processedMessages = [
-                { role: 'system', content: ravenSystemPrompt },
-                { role: 'user', content: 'Ping.' }
-            ];
-        } else {
-            // Prepend Raven's system prompt
-            processedMessages = [
-                { role: 'system', content: ravenSystemPrompt },
-                ...processedMessages
-            ];
+        // Prepare Geometry Context if available
+        let geometryMessage = null;
+        if (chartContext) {
+            geometryMessage = {
+                role: 'system',
+                content: `[CURRENT GEOMETRY DATA]\n${JSON.stringify(chartContext, null, 2)}\n\n[INSTRUCTION]\nUse the above geometry to inform your reading. Do not recite the data raw; weave it into the poetic narrative.`
+            };
         }
+
+        // Assemble Message Chain: System Persona -> Geometry (if any) -> History
+        const baseSystem = { role: 'system', content: ravenSystemPrompt };
+
+        // Strip existing system prompt if present in messages (to avoid dupe)
+        if (processedMessages.length > 0 && processedMessages[0].role === 'system') {
+            processedMessages = processedMessages.slice(1);
+        }
+
+        if (processedMessages.length === 0) {
+            // Default ping
+            processedMessages = [{ role: 'user', content: 'Ping.' }];
+        }
+
+        // Final Assembly
+        processedMessages = [
+            baseSystem,
+            ...(geometryMessage ? [geometryMessage] : []),
+            ...processedMessages
+        ];
 
         const response = await fetch('https://api.perplexity.ai/chat/completions', {
             method: 'POST',

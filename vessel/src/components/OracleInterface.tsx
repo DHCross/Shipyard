@@ -169,7 +169,8 @@ export const OracleInterface: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    messages: newMessages.map(m => ({ role: m.role, content: m.content }))
+                    messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+                    chartContext: chartData // Pass current geometry to Raven
                 })
             });
 
@@ -577,29 +578,81 @@ export const OracleInterface: React.FC = () => {
             <ProfileVault
                 isOpen={showProfileVault}
                 onClose={() => setShowProfileVault(false)}
-                onInject={(profiles: Profile[]) => {
-                    // Format profile data for chat context
-                    const profileSummary = profiles.map(p =>
-                        `${p.name} (${p.birthData.month}/${p.birthData.day}/${p.birthData.year}, ${p.birthData.city})`
-                    ).join(', ');
+                onInject={async (profiles: Profile[]) => {
+                    if (profiles.length === 0) return;
 
-                    const userMsg: Message = {
-                        id: generateId(),
-                        role: 'user',
-                        content: `[PROFILES LOADED] ${profileSummary}`
+                    setIsLoading(true);
+                    const selected = profiles.slice(0, 2); // Handle max 2
+
+                    // Helper to align a single profile
+                    const alignOne = async (p: Profile) => {
+                        const birth_data: any = {
+                            year: p.birthData.year, month: p.birthData.month, day: p.birthData.day,
+                            hour: p.birthData.hour, minute: p.birthData.minute, second: 0
+                        };
+                        if (typeof p.birthData.latitude === 'number' && typeof p.birthData.longitude === 'number') {
+                            birth_data.latitude = p.birthData.latitude;
+                            birth_data.longitude = p.birthData.longitude;
+                        } else {
+                            birth_data.city = p.birthData.city;
+                            birth_data.country_code = p.birthData.country_code;
+                        }
+
+                        const res = await fetch('/api/astrology', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                endpoint: '/api/v3/analysis/natal-report',
+                                method: 'POST',
+                                payload: {
+                                    subject: { name: p.name, birth_data },
+                                    report_options: { tradition: 'psychological', language: 'en' }
+                                }
+                            })
+                        });
+                        const data = await res.json();
+                        if (!res.ok || data.success === false) throw new Error(data.error || "Alignment Failed");
+                        return data;
                     };
-                    setMessages(prev => [...prev, userMsg]);
-                    setIsActiveReading(true); // Enable Resonance Meter
 
-                    // Transition to 'report' mode (Structured Reading)
-                    setSessionMode('report');
-                    setSessionStarted(true);
+                    try {
+                        let finalChartData = null;
 
-                    // If multiple profiles, indicate synastry context
-                    if (profiles.length > 1) {
-                        setInput(`Please read the chart comparison for ${profiles.map(p => p.name).join(' and ')}.`);
-                    } else {
-                        setInput(`Please read the chart for ${profiles[0].name}.`);
+                        if (selected.length === 1) {
+                            // Single Alignment
+                            finalChartData = await alignOne(selected[0]);
+                            setMessages(prev => [...prev, {
+                                id: generateId(), role: 'system', content: `[SYSTEM] Alignment Established: ${selected[0].name}`, hook: 'System'
+                            }]);
+                            setInput(`Please read the chart for ${selected[0].name}.`);
+                        } else {
+                            // Dual Alignment (Parallel)
+                            const [dataA, dataB] = await Promise.all([alignOne(selected[0]), alignOne(selected[1])]);
+                            finalChartData = { subject: dataA, partner: dataB };
+                            setMessages(prev => [...prev, {
+                                id: generateId(), role: 'system', content: `[SYSTEM] Synastry Alignment Established: ${selected[0].name} + ${selected[1].name}`, hook: 'System'
+                            }]);
+                            setInput(`Please read the chart comparison for ${selected[0].name} and ${selected[1].name}.`);
+                        }
+
+                        setChartData(finalChartData);
+                        setSessionMode('report');
+                        setSessionStarted(true);
+                        setIsActiveReading(true);
+
+                        // Inject user context
+                        const profileString = selected.map(p => `${p.name} (${p.birthData.city})`).join(' + ');
+                        setMessages(prev => [...prev, {
+                            id: generateId(), role: 'user', content: `[INJECTED PROFILES] ${profileString}`
+                        }]);
+
+                    } catch (err: any) {
+                        console.error("Injection Failed", err);
+                        setMessages(prev => [...prev, {
+                            id: generateId(), role: 'assistant', content: `Signal failure: ${err.message}`, climate: 'Alert'
+                        }]);
+                    } finally {
+                        setIsLoading(false);
                     }
                 }}
                 onRestoreSession={(data: any) => {

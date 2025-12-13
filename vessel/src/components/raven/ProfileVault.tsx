@@ -64,15 +64,38 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Load profiles from localStorage on mount
+    // Load profiles from localStorage on mount
     useEffect(() => {
         const stored = localStorage.getItem(VAULT_STORAGE_KEY);
         if (stored) {
             try {
-                setProfiles(JSON.parse(stored));
+                const parsed = JSON.parse(stored);
+                setProfiles(parsed);
+                return; // Loaded successfully
             } catch (e) {
                 console.error('Failed to parse profile vault:', e);
             }
         }
+
+        // Default seed if empty or invalid
+        const defaultProfile: Profile = {
+            id: 'profile_default_dhcross',
+            name: 'DHCross',
+            birthData: {
+                year: 1973,
+                month: 7,
+                day: 24,
+                hour: 14,
+                minute: 30,
+                city: 'Bryn Mawr',
+                country_code: 'US',
+                latitude: 40.0167,
+                longitude: -75.3000
+            },
+            lastUpdated: new Date().toISOString()
+        };
+        setProfiles([defaultProfile]);
+        localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify([defaultProfile]));
     }, []);
 
     const toggleSelection = (id: string) => {
