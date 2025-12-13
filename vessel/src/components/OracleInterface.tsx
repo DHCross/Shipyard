@@ -301,7 +301,7 @@ export const OracleInterface: React.FC = () => {
     }, []);
 
     return (
-        <div className="mt-8 w-full max-w-2xl mx-auto flex flex-col h-[55vh] transition-all duration-1000 animate-in fade-in zoom-in-95 relative">
+        <div className={`mt-8 w-full max-w-2xl mx-auto flex flex-col ${showLensCard ? 'h-auto min-h-[55vh]' : 'h-[55vh]'} transition-all duration-1000 animate-in fade-in zoom-in-95 relative`}>
 
             {/* Floating Resonance Meter - only show during active readings, not casual chat */}
             {isActiveReading && (

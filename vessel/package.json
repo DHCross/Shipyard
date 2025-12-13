@@ -14,6 +14,7 @@
     "@reactflow/controls": "^11.2.14",
     "@reactflow/core": "^11.11.4",
     "@reactflow/minimap": "^11.7.14",
+    "@vercel/kv": "^3.0.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.559.0",
     "next": "16.0.8",

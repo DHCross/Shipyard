@@ -1,5 +1,5 @@
 import { validateImport, type ImportType, type ImportResult } from '../../lib/raven/ImportUtils';
-import { Upload, FileJson, AlertCircle } from 'lucide-react';
+import { Upload, FileJson, AlertCircle, LogIn, LogOut, UserPlus } from 'lucide-react';
 
 import React, { useState, useEffect } from 'react';
 import { Users, User, Calendar, MapPin, Heart, Zap, Trash2, Edit2, Check, X } from 'lucide-react';
@@ -24,8 +24,10 @@ export interface Profile {
     lastUpdated: string; // ISO 8601
 }
 
-// Storage key
+// Storage keys
 const VAULT_STORAGE_KEY = 'raven_profile_vault';
+const AUTH_STORAGE_KEY = 'raven_auth_token';
+const USERNAME_STORAGE_KEY = 'raven_username';
 
 // Helper to format date
 function formatDate(bd: Profile['birthData']): string {
@@ -63,15 +65,151 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
     const [importSuccess, setImportSuccess] = useState<string | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-    // Load profiles from localStorage on mount
-    // Load profiles from localStorage on mount
+    // Auth State
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [authToken, setAuthToken] = useState<string | null>(null);
+    const [username, setUsername] = useState('');
+    const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+    const [authUsername, setAuthUsername] = useState('');
+    const [authPassword, setAuthPassword] = useState('');
+    const [authError, setAuthError] = useState<string | null>(null);
+    const [authLoading, setAuthLoading] = useState(false);
+    const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'local'>('local');
+
+    // Check for stored auth on mount
     useEffect(() => {
+        const storedToken = localStorage.getItem(AUTH_STORAGE_KEY);
+        const storedUsername = localStorage.getItem(USERNAME_STORAGE_KEY);
+        if (storedToken && storedUsername) {
+            setAuthToken(storedToken);
+            setUsername(storedUsername);
+            setIsLoggedIn(true);
+            // Fetch vault from server
+            fetchVaultFromServer(storedToken);
+        }
+    }, []);
+
+    // Fetch vault from server
+    const fetchVaultFromServer = async (token: string) => {
+        setSyncStatus('syncing');
+        try {
+            const response = await fetch('/api/vault', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+
+            if (data.fallbackToLocal) {
+                // Server not configured, use local storage
+                setSyncStatus('local');
+                return;
+            }
+
+            if (response.ok && data.profiles) {
+                setProfiles(data.profiles);
+                localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify(data.profiles));
+                setSyncStatus('synced');
+            }
+        } catch (e) {
+            console.error('Failed to fetch vault:', e);
+            setSyncStatus('local');
+        }
+    };
+
+    // Sync vault to server
+    const syncVaultToServer = async (profs: Profile[]) => {
+        if (!authToken) return;
+        setSyncStatus('syncing');
+        try {
+            await fetch('/api/vault', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ profiles: profs })
+            });
+            setSyncStatus('synced');
+        } catch (e) {
+            console.error('Failed to sync vault:', e);
+            setSyncStatus('local');
+        }
+    };
+
+    // Handle login/register
+    const handleAuth = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAuthError(null);
+        setAuthLoading(true);
+
+        try {
+            const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: authMode,
+                    username: authUsername,
+                    password: authPassword
+                })
+            });
+            const data = await response.json();
+
+            if (data.fallbackToLocal) {
+                setAuthError('Account system not available. Using local storage.');
+                setSyncStatus('local');
+                setAuthLoading(false);
+                return;
+            }
+
+            if (!response.ok) {
+                setAuthError(data.error || 'Authentication failed');
+                setAuthLoading(false);
+                return;
+            }
+
+            // Success
+            setAuthToken(data.token);
+            setUsername(data.username);
+            setIsLoggedIn(true);
+            localStorage.setItem(AUTH_STORAGE_KEY, data.token);
+            localStorage.setItem(USERNAME_STORAGE_KEY, data.username);
+            setAuthUsername('');
+            setAuthPassword('');
+
+            // If registering, push current local profiles to server
+            if (authMode === 'register' && profiles.length > 0) {
+                await syncVaultToServer(profiles);
+            } else {
+                // Login: fetch from server
+                await fetchVaultFromServer(data.token);
+            }
+
+        } catch (e) {
+            setAuthError('Connection failed');
+        } finally {
+            setAuthLoading(false);
+        }
+    };
+
+    // Handle logout
+    const handleLogout = () => {
+        setIsLoggedIn(false);
+        setAuthToken(null);
+        setUsername('');
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem(USERNAME_STORAGE_KEY);
+        setSyncStatus('local');
+    };
+
+    // Load profiles from localStorage on mount (fallback)
+    useEffect(() => {
+        if (isLoggedIn) return; // Skip if logged in - server handles this
+
         const stored = localStorage.getItem(VAULT_STORAGE_KEY);
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
                 setProfiles(parsed);
-                return; // Loaded successfully
+                return;
             } catch (e) {
                 console.error('Failed to parse profile vault:', e);
             }
@@ -96,7 +234,7 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
         };
         setProfiles([defaultProfile]);
         localStorage.setItem(VAULT_STORAGE_KEY, JSON.stringify([defaultProfile]));
-    }, []);
+    }, [isLoggedIn]);
 
     const toggleSelection = (id: string) => {
         const newSelected = new Set(selectedIds);
@@ -245,8 +383,80 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
                     </div>
                 )}
 
-                {/* Profile List */}
-                {/* ... existing profile list code ... */}
+                {/* Auth Section */}
+                <div className="mx-4 mt-4 p-3 border border-slate-700/50 rounded bg-slate-800/30">
+                    {isLoggedIn ? (
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-emerald-400" />
+                                <span className="text-xs font-mono text-emerald-200">{username}</span>
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded ${syncStatus === 'synced' ? 'bg-emerald-500/20 text-emerald-300' :
+                                        syncStatus === 'syncing' ? 'bg-amber-500/20 text-amber-300' :
+                                            'bg-slate-500/20 text-slate-400'
+                                    }`}>
+                                    {syncStatus === 'synced' ? '✓ Synced' : syncStatus === 'syncing' ? '↻ Syncing' : '⚡ Local'}
+                                </span>
+                            </div>
+                            <button
+                                onClick={handleLogout}
+                                className="text-slate-400 hover:text-rose-400 transition-colors"
+                                title="Logout"
+                            >
+                                <LogOut className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleAuth} className="space-y-2">
+                            <div className="flex items-center gap-2 mb-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setAuthMode('login')}
+                                    className={`text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded ${authMode === 'login' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400'}`}
+                                >
+                                    Login
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setAuthMode('register')}
+                                    className={`text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded ${authMode === 'register' ? 'bg-indigo-500/20 text-indigo-300' : 'text-slate-400'}`}
+                                >
+                                    Create Account
+                                </button>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Username"
+                                value={authUsername}
+                                onChange={(e) => setAuthUsername(e.target.value)}
+                                className="w-full bg-slate-900/60 border border-slate-600/40 rounded px-2 py-1.5 text-xs text-emerald-100 font-mono"
+                                required
+                                minLength={3}
+                            />
+                            <input
+                                type="password"
+                                placeholder="Password"
+                                value={authPassword}
+                                onChange={(e) => setAuthPassword(e.target.value)}
+                                className="w-full bg-slate-900/60 border border-slate-600/40 rounded px-2 py-1.5 text-xs text-emerald-100 font-mono"
+                                required
+                                minLength={6}
+                            />
+                            {authError && (
+                                <div className="text-[10px] text-rose-400">{authError}</div>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={authLoading}
+                                className="w-full bg-emerald-600/30 hover:bg-emerald-500/40 border border-emerald-500/40 rounded px-2 py-1.5 text-xs font-mono text-emerald-200 transition-colors disabled:opacity-50"
+                            >
+                                {authLoading ? 'Please wait...' : (authMode === 'login' ? 'Login' : 'Create Account')}
+                            </button>
+                            <p className="text-[9px] text-slate-500 text-center">
+                                {syncStatus === 'local' && 'Using local storage (server not configured)'}
+                            </p>
+                        </form>
+                    )}
+                </div>
 
                 {/* Profile List */}
                 <div className="flex-1 overflow-y-auto p-2 space-y-2">

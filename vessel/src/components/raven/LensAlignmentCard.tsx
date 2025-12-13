@@ -42,7 +42,7 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
     const [cityResults, setCityResults] = useState<City[]>([]);
     const [selectedCity, setSelectedCity] = useState<City | null>(null);
 
-    // Partner State (Relational Mode)
+    // Partner State (Second Person)
     const [isRelational, setIsRelational] = useState(false);
     const [partnerName, setPartnerName] = useState('');
     const [partnerDate, setPartnerDate] = useState('');
@@ -51,6 +51,22 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
     const [partnerCityQuery, setPartnerCityQuery] = useState('');
     const [partnerCityResults, setPartnerCityResults] = useState<City[]>([]);
     const [partnerSelectedCity, setPartnerSelectedCity] = useState<City | null>(null);
+
+    // Reading Type & Role Configuration (when 2 people present)
+    type ReadingType = 'two_solo' | 'synastry' | 'composite';
+    type RelationshipRole = 'partner' | 'parent_child' | 'child_parent' | 'siblings' | 'friends' | 'colleagues' | 'other';
+    const [readingType, setReadingType] = useState<ReadingType>('synastry');
+    const [relationshipRole, setRelationshipRole] = useState<RelationshipRole>('partner');
+
+    const roleLabels: Record<RelationshipRole, { a: string; b: string }> = {
+        'partner': { a: 'Person A', b: 'Person B' },
+        'parent_child': { a: 'Parent', b: 'Child' },
+        'child_parent': { a: 'Child', b: 'Parent' },
+        'siblings': { a: 'Sibling A', b: 'Sibling B' },
+        'friends': { a: 'Friend A', b: 'Friend B' },
+        'colleagues': { a: 'Colleague A', b: 'Colleague B' },
+        'other': { a: 'Person A', b: 'Person B' }
+    };
 
     // Relocation State
     const [showRelocation, setShowRelocation] = useState(false);
@@ -279,9 +295,24 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
                 const finalA = targetCity ? applyRelocation(dataA, date, targetCity) : dataA;
                 const finalB = targetCity ? applyRelocation(dataB, partnerDate, targetCity) : dataB;
 
-                onAlign({ subject: finalA, partner: finalB });
-                // Can't easily save 2 profiles via prompt yet, skipping save prompt for synastry for now to keep it simple,
-                // OR offering save for both? Complexity. Let's align first.
+                // Build payload with reading context
+                const payload = {
+                    readingType,
+                    relationshipRole,
+                    roleLabels: roleLabels[relationshipRole],
+                    subject: { ...finalA, label: roleLabels[relationshipRole].a },
+                    partner: { ...finalB, label: roleLabels[relationshipRole].b }
+                };
+
+                if (readingType === 'two_solo') {
+                    // Two Solo: Return array of two separate readings
+                    onAlign({ ...payload, mode: 'two_solo', charts: [finalA, finalB] });
+                } else {
+                    // Synastry or Composite: Relational reading
+                    onAlign(payload);
+                }
+
+                // Can't easily save 2 profiles via prompt yet, skipping save prompt for synastry for now
                 setLastAlignedData(null);
             } else {
                 const data = await alignProfile(name, date, time, selectedCity, timeUnknown);
@@ -412,17 +443,70 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
                         onClick={() => setIsRelational(!isRelational)}
                         className={`text-[10px] uppercase tracking-wider font-mono px-2 py-1 rounded border transition-colors flex items-center gap-1 ${isRelational ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' : 'text-emerald-500/60 border-emerald-500/20 hover:text-emerald-400'}`}
                     >
-                        {isRelational ? 'Synastry Mode' : '+ Add Partner'}
+                        {isRelational ? 'Two People' : '+ Add Person'}
                     </button>
                 </div>
             </div>
 
             <div className="p-6 space-y-4">
+                {/* Person A Input - with dynamic role label */}
+                <div className="text-xs font-mono uppercase text-emerald-500/50 mb-1">
+                    {isRelational ? roleLabels[relationshipRole].a : 'Your Birth Data'}
+                </div>
                 {renderInputGroup('subject')}
 
                 {isRelational && (
-                    <div className="animate-fade-in-up">
+                    <div className="animate-fade-in-up space-y-4">
+                        {/* Person B Input - with dynamic role label */}
+                        <div className="text-xs font-mono uppercase text-indigo-400/50 mt-4 mb-1">
+                            {roleLabels[relationshipRole].b}
+                        </div>
                         {renderInputGroup('partner')}
+
+                        {/* Reading Type & Relationship Role Selection */}
+                        <div className="pt-4 border-t border-indigo-500/20 space-y-3">
+                            <div className="text-xs font-mono uppercase text-indigo-400/50 mb-2">Reading Type</div>
+                            <div className="flex gap-2 flex-wrap">
+                                <button
+                                    onClick={() => setReadingType('two_solo')}
+                                    className={`text-[10px] uppercase tracking-wider font-mono px-3 py-1.5 rounded border transition-colors ${readingType === 'two_solo' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'text-slate-400 border-slate-600/40 hover:text-emerald-400'}`}
+                                >
+                                    2 Solo Reports
+                                </button>
+                                <button
+                                    onClick={() => setReadingType('synastry')}
+                                    className={`text-[10px] uppercase tracking-wider font-mono px-3 py-1.5 rounded border transition-colors ${readingType === 'synastry' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40' : 'text-slate-400 border-slate-600/40 hover:text-indigo-400'}`}
+                                >
+                                    Synastry
+                                </button>
+                                <button
+                                    onClick={() => setReadingType('composite')}
+                                    className={`text-[10px] uppercase tracking-wider font-mono px-3 py-1.5 rounded border transition-colors ${readingType === 'composite' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'text-slate-400 border-slate-600/40 hover:text-rose-400'}`}
+                                >
+                                    Composite
+                                </button>
+                            </div>
+
+                            {/* Relationship Role (only for synastry/composite) */}
+                            {(readingType === 'synastry' || readingType === 'composite') && (
+                                <div className="animate-fade-in-up">
+                                    <div className="text-xs font-mono uppercase text-indigo-400/50 mb-2 mt-3">Relationship</div>
+                                    <select
+                                        value={relationshipRole}
+                                        onChange={(e) => setRelationshipRole(e.target.value as RelationshipRole)}
+                                        className="w-full bg-slate-900/60 border border-indigo-500/30 rounded px-3 py-2 text-emerald-100 text-sm font-mono focus:border-indigo-400 focus:outline-none"
+                                    >
+                                        <option value="partner">Partners / Romantic</option>
+                                        <option value="parent_child">Parent → Child</option>
+                                        <option value="child_parent">Child → Parent</option>
+                                        <option value="siblings">Siblings</option>
+                                        <option value="friends">Friends</option>
+                                        <option value="colleagues">Colleagues</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
