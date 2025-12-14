@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Key, Users, Power } from 'lucide-react';
+import { Send, Key, Users, Power, User } from 'lucide-react';
 import ResonanceMeter, { recordPing, PingResponse, CheckpointType } from './ResonanceMeter';
 import PingFeedback from './PingFeedback';
 import { GlossaryOverlay } from './GlossaryOverlay';
@@ -9,6 +9,8 @@ import { LensAlignmentCard } from './raven/LensAlignmentCard';
 import { ProfileVault, type Profile } from './raven/ProfileVault';
 import { SessionWrapUp } from './raven/SessionWrapUp';
 import { parseBirthData, formatParsedData, type ParsedBirthData } from '@/lib/raven/BirthDataParser';
+import { AccountModal } from './AccountModal';
+import { useAuth } from '@/lib/AuthContext';
 
 interface Message {
     id: string;
@@ -42,6 +44,10 @@ export const OracleInterface: React.FC = () => {
     const lastUserMsgRef = useRef<HTMLDivElement>(null); // For scroll-to-response
     const [showWrapUp, setShowWrapUp] = useState(false); // Session wrap-up modal
     const [chartData, setChartData] = useState<any>(null); // Store raw V3 API response for export
+    const [showAccountModal, setShowAccountModal] = useState(false); // Account modal visibility
+
+    // Auth context
+    const { isLoggedIn, username } = useAuth();
 
     // Birth data detection state machine
 
@@ -366,7 +372,7 @@ export const OracleInterface: React.FC = () => {
                 className="flex-1 overflow-y-auto space-y-6 p-4 scrollbar-hide text-sm"
             >
                 {messages.length === 0 && !showLensCard && (
-                    <div className="flex flex-col items-center justify-center h-full text-center relative gap-4">
+                    <div className="flex flex-col items-center justify-center h-full text-center relative gap-4 pt-8">
                         {/* Subtle lens glow behind quote */}
                         <div className="absolute inset-0 -z-10 flex items-center justify-center">
                             <div className="w-64 h-64 rounded-full bg-gradient-radial from-emerald-900/5 to-transparent blur-2xl"></div>
@@ -550,6 +556,19 @@ export const OracleInterface: React.FC = () => {
                     </button>
                 )}
 
+                {/* Account Button */}
+                <button
+                    onClick={() => setShowAccountModal(true)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider bg-slate-900/50 hover:bg-slate-800/70 border rounded-lg transition-all ${isLoggedIn
+                        ? 'text-emerald-400 border-emerald-500/30 hover:border-emerald-400/50'
+                        : 'text-slate-500 hover:text-amber-400 border-slate-800 hover:border-amber-500/30'
+                        }`}
+                    title={isLoggedIn ? `Signed in as ${username}` : 'Sign In / Create Account'}
+                >
+                    <User className="w-3 h-3" />
+                    <span>{isLoggedIn ? username : 'Account'}</span>
+                </button>
+
                 {/* Vault Button */}
                 <button
                     onClick={() => setShowProfileVault(true)}
@@ -573,6 +592,9 @@ export const OracleInterface: React.FC = () => {
 
             {/* Glossary Overlay */}
             <GlossaryOverlay isOpen={showGlossary} onClose={() => setShowGlossary(false)} />
+
+            {/* Account Modal */}
+            <AccountModal isOpen={showAccountModal} onClose={() => setShowAccountModal(false)} />
 
             {/* Profile Vault Panel */}
             <ProfileVault

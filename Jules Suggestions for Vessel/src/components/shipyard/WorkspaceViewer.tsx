@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { VirtualFile } from '@/types';
 import { FileText, Clock, Copy, Check, Download, Package, FolderTree, Pencil, Eye, Save } from 'lucide-react';
 import JSZip from 'jszip';
@@ -7,19 +7,19 @@ import CodeMapVisualizer from './CodeMapVisualizer';
 interface WorkspaceViewerProps {
   files: VirtualFile[];
   onUpdateFile?: (path: string, content: string) => void;
-  activePath?: string | null; // Parent-driven selection
-  onSelectFile?: (path: string) => void; // Bubble selection up to parent
+  activePath?: string | null;
+  onSelectFile?: (path: string) => void;
 }
 
 const WorkspaceViewer: React.FC<WorkspaceViewerProps> = ({ files, onUpdateFile, activePath, onSelectFile }) => {
-  // Derive selectedFile from activePath (parent-driven) OR fallback to last file
-  const selectedFile = useMemo(() => {
-    if (activePath) {
-      return files.find(f => f.path === activePath) || null;
-    }
-    return files.length > 0 ? files[files.length - 1] : null;
+  // Derive selected file from activePath if provided, otherwise default logic (though activePath should be driven by parent now)
+  const selectedFile = React.useMemo(() => {
+      if (activePath) {
+          return files.find(f => f.path === activePath) || null;
+      }
+      return files.length > 0 ? files[files.length - 1] : null;
   }, [files, activePath]);
-
+  
   const [copied, setCopied] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -34,10 +34,9 @@ const WorkspaceViewer: React.FC<WorkspaceViewerProps> = ({ files, onUpdateFile, 
   }, [selectedFile]);
 
   const handleSelectPath = (path: string) => {
-    // Bubble up to parent if callback provided
-    if (onSelectFile) {
-      onSelectFile(path);
-    }
+      if (onSelectFile) {
+          onSelectFile(path);
+      }
   };
 
   const handleCopy = () => {
