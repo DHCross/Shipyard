@@ -104,7 +104,7 @@ If you cannot find the location, return: {"error": "not found"}`;
         // Parse JSON from response
         try {
             // Clean up potential markdown formatting
-            let cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             const parsed = JSON.parse(cleaned);
 
             if (parsed.error) {

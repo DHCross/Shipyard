@@ -146,6 +146,18 @@ const ShipyardBridge: React.FC = () => {
 
     const [activeTab, setActiveTab] = useState<TabView>(TabView.MANIFEST); // Start on Manifest
     const [isLoading, setIsLoading] = useState(false);
+    const [activePath, setActivePath] = useState<string | null>(null);
+
+    const handleFileSelect = (path: string) => {
+        setActivePath(path);
+        // Ensure we switch to workspace if not already there, unless we are just selecting in the background?
+        // Actually, if selected from map, we want to go to workspace.
+        // If selected from workspace sidebar, we stay in workspace.
+        // If selected from map, the map is in 'RESPONSE' tab usually (Telemetry).
+        if (activeTab === TabView.RESPONSE) {
+            setActiveTab(TabView.WORKSPACE);
+        }
+    };
 
     const handleCreateFile = (path: string, content: string) => {
         setVirtualFiles(prev => {
@@ -157,6 +169,8 @@ const ShipyardBridge: React.FC = () => {
         if (activeTab !== TabView.MANIFEST) {
             setActiveTab(TabView.WORKSPACE);
         }
+        // Also select the new file
+        setActivePath(path);
     };
 
     // Updated to accept an optional config override. 
@@ -399,9 +413,8 @@ const ShipyardBridge: React.FC = () => {
                                 ) : (
                                     <CodemapViewer
                                         files={virtualFiles}
-                                        onFileSelect={(path) => {
-                                            setActiveTab(TabView.WORKSPACE);
-                                        }}
+                                        onFileSelect={handleFileSelect}
+                                        activePath={activePath}
                                     />
                                 )}
                             </div>
@@ -410,6 +423,8 @@ const ShipyardBridge: React.FC = () => {
                             <WorkspaceViewer
                                 files={virtualFiles}
                                 onUpdateFile={handleCreateFile}
+                                activePath={activePath}
+                                onSelectFile={handleFileSelect}
                             />
                         )}
                         {activeTab === TabView.MANIFEST && (

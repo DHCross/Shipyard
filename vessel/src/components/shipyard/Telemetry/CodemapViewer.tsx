@@ -10,15 +10,57 @@ import ReactFlow, {
     Handle,
     Position,
     NodeProps,
+    ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import dagre from 'dagre';
 import { VirtualFile } from '@/types';
 import { FileCode, FileText, FileJson, Folder, Cog } from 'lucide-react';
 
 interface CodemapViewerProps {
     files: VirtualFile[];
     onFileSelect: (path: string) => void;
+    activePath?: string | null;
 }
+
+// Dagre setup for layouting
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+const nodeWidth = 220;
+const nodeHeight = 60;
+
+const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = 'TB') => {
+    const isHorizontal = direction === 'LR';
+    dagreGraph.setGraph({ rankdir: direction });
+
+    nodes.forEach((node) => {
+        dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    });
+
+    edges.forEach((edge) => {
+        dagreGraph.setEdge(edge.source, edge.target);
+    });
+
+    dagre.layout(dagreGraph);
+
+    nodes.forEach((node) => {
+        const nodeWithPosition = dagreGraph.node(node.id);
+        node.targetPosition = isHorizontal ? Position.Left : Position.Top;
+        node.sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
+
+        // We are shifting the dagre node position (anchor=center center) to the top left
+        // so it matches the React Flow node anchor point (top left).
+        node.position = {
+            x: nodeWithPosition.x - nodeWidth / 2,
+            y: nodeWithPosition.y - nodeHeight / 2,
+        };
+
+        return node;
+    });
+
+    return { nodes, edges };
+};
 
 // Custom Node Component with enhanced visuals
 const FileNode: React.FC<NodeProps> = ({ data }) => {
@@ -32,7 +74,12 @@ const FileNode: React.FC<NodeProps> = ({ data }) => {
     };
 
     // Color-coding by file type (border + glow)
-    const getTypeStyle = (path: string) => {
+    const getTypeStyle = (path: string, isActive: boolean) => {
+        // Base active style override
+        if (isActive) {
+             return 'border-white bg-slate-800 shadow-[0_0_20px_rgba(255,255,255,0.4)] scale-105 z-10';
+        }
+
         if (path.endsWith('.tsx') || path.endsWith('.ts')) {
             return 'border-indigo-500 bg-indigo-950/60 shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)]';
         }
@@ -59,7 +106,7 @@ const FileNode: React.FC<NodeProps> = ({ data }) => {
 
     return (
         <div
-            className={`relative px-4 py-2.5 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-105 ${getTypeStyle(data.path)}`}
+            className={`relative px-4 py-2.5 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:scale-105 ${getTypeStyle(data.path, data.isActive)}`}
             onClick={() => {
                 if (data.onSelect) {
                     const cleanPath = data.path.startsWith('vessel/') ? data.path.replace('vessel/', '') : data.path;
@@ -83,75 +130,106 @@ const FileNode: React.FC<NodeProps> = ({ data }) => {
 
 const nodeTypes = { fileNode: FileNode };
 
-export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelect }) => {
-    // Generate nodes from files
-    const initialNodes: Node[] = useMemo(() => {
-        return files.map((file, index) => {
-            // Simple grid layout
-            const cols = 4;
-            const x = (index % cols) * 200 + 50;
-            const y = Math.floor(index / cols) * 100 + 50;
-
-            // Determine status (for now, all are "complete")
-            const status = 'complete';
-
-            return {
-                id: file.path,
-                type: 'fileNode',
-                position: { x, y },
-                data: {
-                    label: file.path.split('/').pop() || file.path,
-                    path: file.path,
-                    status,
-                    onSelect: onFileSelect,
-                },
-            };
-        });
-    }, [files, onFileSelect]);
-
-    // Generate edges based on directory hierarchy
-    const initialEdges: Edge[] = useMemo(() => {
+export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelect, activePath }) => {
+    // Generate nodes and edges with tree logic
+    const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
+        const nodes: Node[] = [];
         const edges: Edge[] = [];
-        const dirMap: Record<string, string[]> = {};
+        const dirMap: Record<string, string[]> = {}; // Map directory to contained files (or subdirs)
 
-        // Group files by directory
-        files.forEach((file) => {
+        // 1. Identify all unique directory paths from the file list
+        const directories = new Set<string>();
+        files.forEach(file => {
             const parts = file.path.split('/');
+            // If it's deeper than root
             if (parts.length > 1) {
-                const dir = parts.slice(0, -1).join('/');
-                if (!dirMap[dir]) dirMap[dir] = [];
-                dirMap[dir].push(file.path);
-            }
-        });
-
-        // Create edges from directory "parent" to children
-        Object.entries(dirMap).forEach(([dir, children]) => {
-            // Find first file in this dir to act as "parent" visual anchor
-            const parentFile = files.find(f => f.path.startsWith(dir + '/'));
-            if (parentFile && children.length > 1) {
-                for (let i = 1; i < children.length; i++) {
-                    edges.push({
-                        id: `${children[0]}-${children[i]}`,
-                        source: children[0],
-                        target: children[i],
-                        animated: true, // Animated for "alive" feel
-                        style: { stroke: '#06b6d4', strokeWidth: 1.5 }, // Cyan for visibility
-                    });
+                // Add all intermediate directories
+                let currentPath = '';
+                for (let i = 0; i < parts.length - 1; i++) {
+                     const part = parts[i];
+                     currentPath = currentPath ? `${currentPath}/${part}` : part;
+                     directories.add(currentPath);
                 }
             }
         });
 
-        return edges;
-    }, [files]);
+        // 2. Create nodes for Directories
+        directories.forEach(dirPath => {
+             nodes.push({
+                 id: dirPath, // ID is the path
+                 type: 'fileNode',
+                 position: { x: 0, y: 0 },
+                 data: {
+                     label: dirPath.split('/').pop() || dirPath,
+                     path: dirPath,
+                     status: 'folder',
+                     onSelect: onFileSelect, // Folders can also be selectable if we want
+                     isActive: activePath === dirPath
+                 }
+             });
+        });
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+        // 3. Create nodes for Files
+        files.forEach((file) => {
+             nodes.push({
+                 id: file.path,
+                 type: 'fileNode',
+                 position: { x: 0, y: 0 },
+                 data: {
+                     label: file.path.split('/').pop() || file.path,
+                     path: file.path,
+                     status: 'complete',
+                     onSelect: onFileSelect,
+                     isActive: activePath === file.path
+                 }
+             });
+        });
 
-    // Update nodes when files change
+        // 4. Create Edges (Hierarchy)
+        // Link files to their parent directory
+        files.forEach(file => {
+             const parts = file.path.split('/');
+             if (parts.length > 1) {
+                 const parentDir = parts.slice(0, -1).join('/');
+                 edges.push({
+                     id: `${parentDir}-${file.path}`,
+                     source: parentDir,
+                     target: file.path,
+                     type: 'smoothstep',
+                     animated: true,
+                     style: { stroke: '#06b6d4', strokeWidth: 1.5 },
+                 });
+             }
+        });
+
+        // Link directories to their parent directory
+        directories.forEach(dirPath => {
+            const parts = dirPath.split('/');
+            if (parts.length > 1) {
+                const parentDir = parts.slice(0, -1).join('/');
+                edges.push({
+                     id: `${parentDir}-${dirPath}`,
+                     source: parentDir,
+                     target: dirPath,
+                     type: 'smoothstep',
+                     animated: true,
+                     style: { stroke: '#64748b', strokeWidth: 1.5, strokeDasharray: '5,5' },
+                });
+            }
+        });
+
+        // 5. Apply Dagre Layout
+        return getLayoutedElements(nodes, edges);
+    }, [files, onFileSelect, activePath]);
+
+    const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
+
+    // Update nodes when files or selection change
     React.useEffect(() => {
-        setNodes(initialNodes);
-        setEdges(initialEdges);
-    }, [initialNodes, initialEdges, setNodes, setEdges]);
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
+    }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
 
     if (files.length === 0) {
         return (
@@ -167,31 +245,34 @@ export const CodemapViewer: React.FC<CodemapViewerProps> = ({ files, onFileSelec
 
     return (
         <div className="h-full w-full bg-slate-950">
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                nodeTypes={nodeTypes}
-                fitView
-                attributionPosition="bottom-left"
-                className="bg-slate-950"
-            >
-                <Background color="#334155" gap={20} size={1} />
-                <Controls className="!bg-slate-800 !border-slate-700 !rounded-lg [&>button]:!bg-slate-700 [&>button]:!border-slate-600 [&>button]:!text-slate-300 [&>button:hover]:!bg-slate-600" />
-                <MiniMap
-                    nodeColor={(node) => {
-                        // Color by file type for consistency
-                        const path = node.data?.path || '';
-                        if (path.endsWith('.tsx') || path.endsWith('.ts')) return '#6366f1'; // indigo
-                        if (path.endsWith('.md')) return '#10b981'; // emerald
-                        if (path.endsWith('.json')) return '#f59e0b'; // amber
-                        if (path.endsWith('.css')) return '#ec4899'; // pink
-                        return '#64748b'; // slate
-                    }}
-                    className="!bg-slate-900 !border-slate-700 !rounded-lg"
-                />
-            </ReactFlow>
+            <ReactFlowProvider>
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    nodeTypes={nodeTypes}
+                    fitView
+                    attributionPosition="bottom-left"
+                    className="bg-slate-950"
+                >
+                    <Background color="#334155" gap={20} size={1} />
+                    <Controls className="!bg-slate-800 !border-slate-700 !rounded-lg [&>button]:!bg-slate-700 [&>button]:!border-slate-600 [&>button]:!text-slate-300 [&>button:hover]:!bg-slate-600" />
+                    <MiniMap
+                        nodeColor={(node) => {
+                            // Color by file type for consistency
+                            const path = node.data?.path || '';
+                            if (node.data?.isActive) return '#ffffff';
+                            if (path.endsWith('.tsx') || path.endsWith('.ts')) return '#6366f1'; // indigo
+                            if (path.endsWith('.md')) return '#10b981'; // emerald
+                            if (path.endsWith('.json')) return '#f59e0b'; // amber
+                            if (path.endsWith('.css')) return '#ec4899'; // pink
+                            return '#64748b'; // slate
+                        }}
+                        className="!bg-slate-900 !border-slate-700 !rounded-lg"
+                    />
+                </ReactFlow>
+            </ReactFlowProvider>
         </div>
     );
 };
