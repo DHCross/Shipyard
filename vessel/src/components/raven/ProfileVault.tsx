@@ -299,6 +299,23 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
                     setProfiles(updated);
                     setImportSuccess(`Imported profile: ${newProfile.name}`);
                 }
+                else if (result.type === 'profile_array' && result.normalizedData) {
+                    // Bulk import array of profiles
+                    const importedProfiles: Profile[] = [];
+                    for (const item of result.normalizedData) {
+                        const newProfile: Profile = {
+                            id: item.id || generateProfileId(),
+                            name: item.name,
+                            birthData: item.birthData,
+                            lastUpdated: item.lastUpdated || new Date().toISOString()
+                        };
+                        saveProfileToVault(newProfile);
+                        importedProfiles.push(newProfile);
+                    }
+                    // Refresh local state
+                    setProfiles(prev => [...prev, ...importedProfiles]);
+                    setImportSuccess(`Imported ${importedProfiles.length} profiles`);
+                }
                 else if ((result.type === 'session_export' || result.type === 'legacy_report') && result.normalizedData) {
                     // If we have onRestoreSession, offer to restore immediately
                     if (onRestoreSession) {

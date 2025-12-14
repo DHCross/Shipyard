@@ -7,7 +7,7 @@
  * 3. Profile Vault Exports
  */
 
-export type ImportType = 'profile' | 'session_export' | 'legacy_report' | 'unknown';
+export type ImportType = 'profile' | 'profile_array' | 'session_export' | 'legacy_report' | 'unknown';
 
 export interface ImportResult {
     valid: boolean;
@@ -23,6 +23,16 @@ export interface ImportResult {
 export function validateImport(data: any): ImportResult {
     if (!data || typeof data !== 'object') {
         return { valid: false, type: 'unknown', error: "Invalid JSON format" };
+    }
+
+    // 0. Profile Array (Vault Bulk Import) - e.g., [{ id, name, birthData }, ...]
+    if (Array.isArray(data) && data.length > 0 && data[0].birthData && data[0].name) {
+        return {
+            valid: true,
+            type: 'profile_array' as ImportType,
+            data,
+            normalizedData: data // Array of profiles
+        };
     }
 
     // 1. Profile Vault Export (Single Profile)
