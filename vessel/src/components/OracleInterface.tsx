@@ -624,16 +624,19 @@ export const OracleInterface: React.FC = () => {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                endpoint: '/api/v3/analysis/natal-report',
+                                endpoint: '/api/v3/data/positions',
                                 method: 'POST',
                                 payload: {
-                                    subject: { name: p.name, birth_data },
-                                    report_options: { tradition: 'psychological', language: 'en' }
+                                    subject: { name: p.name, birth_data }
                                 }
                             })
                         });
                         const data = await res.json();
-                        if (!res.ok || data.success === false) throw new Error(data.error || "Alignment Failed");
+                        console.log('[Alignment] API Response:', { status: res.status, ok: res.ok, data });
+                        if (!res.ok || data.success === false) {
+                            const errorMsg = data.error || data.message || data.detail || JSON.stringify(data).substring(0, 200);
+                            throw new Error(`Alignment Failed: ${errorMsg}`);
+                        }
                         return data;
                     };
 

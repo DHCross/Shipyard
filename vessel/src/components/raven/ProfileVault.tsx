@@ -300,21 +300,36 @@ export function ProfileVault({ isOpen, onClose, onInject, onEditProfile, onResto
                     setImportSuccess(`Imported profile: ${newProfile.name}`);
                 }
                 else if (result.type === 'profile_array' && result.normalizedData) {
-                    // Bulk import array of profiles
+                    // Bulk import array of profiles (skip duplicates by ID)
+                    const existingIds = new Set(profiles.map(p => p.id));
                     const importedProfiles: Profile[] = [];
+                    let skippedCount = 0;
+
                     for (const item of result.normalizedData) {
+                        const profileId = item.id || generateProfileId();
+
+                        // Skip if already exists
+                        if (existingIds.has(profileId)) {
+                            skippedCount++;
+                            continue;
+                        }
+
                         const newProfile: Profile = {
-                            id: item.id || generateProfileId(),
+                            id: profileId,
                             name: item.name,
                             birthData: item.birthData,
                             lastUpdated: item.lastUpdated || new Date().toISOString()
                         };
                         saveProfileToVault(newProfile);
                         importedProfiles.push(newProfile);
+                        existingIds.add(profileId); // Track to avoid duplicates within same import
                     }
                     // Refresh local state
                     setProfiles(prev => [...prev, ...importedProfiles]);
-                    setImportSuccess(`Imported ${importedProfiles.length} profiles`);
+                    const msg = skippedCount > 0
+                        ? `Imported ${importedProfiles.length} profiles (${skippedCount} duplicates skipped)`
+                        : `Imported ${importedProfiles.length} profiles`;
+                    setImportSuccess(msg);
                 }
                 else if ((result.type === 'session_export' || result.type === 'legacy_report') && result.normalizedData) {
                     // If we have onRestoreSession, offer to restore immediately

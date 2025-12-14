@@ -172,9 +172,9 @@ export function LensAlignmentCard({ onAlign, onCancel }: LensAlignmentCardProps)
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    endpoint: '/api/v3/analysis/natal-report',
+                    endpoint: '/api/v3/data/positions',
                     method: 'POST',
-                    payload: payload
+                    payload: { subject: payload.subject }
                 })
             });
 

@@ -1,0 +1,52 @@
+{
+    "name": "hurricane-michael-maryland-control",
+    "description": "Location control - Maryland (not affected by hurricane) on same date",
+    "expected": {
+        "magnitude": "0-1.0",
+        "directional_bias": "near zero",
+        "classification": "neutral"
+    },
+    "mode": "balance_meter",
+    "personA": {
+        "name": "Dan",
+        "year": 1973,
+        "month": 7,
+        "day": 24,
+        "hour": 14,
+        "minute": 30,
+        "latitude": 40.0167,
+        "longitude": -75.3,
+        "timezone": "America/New_York",
+        "city": "Bryn Mawr",
+        "nation": "US",
+        "zodiac_type": "Tropic"
+    },
+    "window": {
+        "start": "2018-10-10",
+        "end": "2018-10-10",
+        "step": "daily"
+    },
+    "relocation_mode": "A_local",
+    "translocation": {
+        "applies": true,
+        "method": "A_local",
+        "current_location": {
+            "latitude": 39.0458,
+            "longitude": -76.6413,
+            "timezone": "America/New_York",
+            "label": "Baltimore, MD"
+        }
+    },
+    "indices": {
+        "window": {
+            "start": "2018-10-10",
+            "end": "2018-10-10",
+            "step": "daily"
+        },
+        "request_daily": true
+    },
+    "frontstage_policy": {
+        "autogenerate": true,
+        "allow_symbolic_weather": true
+    }
+}

@@ -1,0 +1,52 @@
+{
+    "name": "neutral-date-panama-city",
+    "description": "Temporal control - Panama City on a neutral date (July 1, 2018)",
+    "expected": {
+        "magnitude": "0-2.0",
+        "directional_bias": "variable",
+        "classification": "neutral"
+    },
+    "mode": "balance_meter",
+    "personA": {
+        "name": "Dan",
+        "year": 1973,
+        "month": 7,
+        "day": 24,
+        "hour": 14,
+        "minute": 30,
+        "latitude": 40.0167,
+        "longitude": -75.3,
+        "timezone": "America/New_York",
+        "city": "Bryn Mawr",
+        "nation": "US",
+        "zodiac_type": "Tropic"
+    },
+    "window": {
+        "start": "2018-07-01",
+        "end": "2018-07-01",
+        "step": "daily"
+    },
+    "relocation_mode": "A_local",
+    "translocation": {
+        "applies": true,
+        "method": "A_local",
+        "current_location": {
+            "latitude": 30.166667,
+            "longitude": -85.666667,
+            "timezone": "America/Chicago",
+            "label": "Panama City, FL"
+        }
+    },
+    "indices": {
+        "window": {
+            "start": "2018-07-01",
+            "end": "2018-07-01",
+            "step": "daily"
+        },
+        "request_daily": true
+    },
+    "frontstage_policy": {
+        "autogenerate": true,
+        "allow_symbolic_weather": true
+    }
+}
