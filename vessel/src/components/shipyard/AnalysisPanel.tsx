@@ -180,7 +180,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ fetchedData, onConfigChan
   };
 
   const handleSend = async (overrideInput?: string) => {
-    let textToSend = overrideInput || input;
+    const textToSend = overrideInput || input;
     if (!textToSend.trim()) return;
 
     // Force prompt injection for system commands to ensure tool execution
@@ -398,7 +398,7 @@ PHILOSOPHY:
       let keepGoing = true;
       const MAX_TURNS = 25; // Increased for Autonomous Mode
 
-      let currentTurnHistory: Content[] = [
+      const currentTurnHistory: Content[] = [
         { role: 'user', parts: [{ text: fullPrompt }] }
       ];
 

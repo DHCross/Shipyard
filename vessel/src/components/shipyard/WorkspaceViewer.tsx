@@ -7,35 +7,36 @@ import CodeMapVisualizer from './CodeMapVisualizer';
 interface WorkspaceViewerProps {
   files: VirtualFile[];
   onUpdateFile?: (path: string, content: string) => void;
+  activePath?: string | null;
+  onSelectFile?: (path: string) => void;
 }
 
-const WorkspaceViewer: React.FC<WorkspaceViewerProps> = ({ files, onUpdateFile }) => {
-  const [selectedFile, setSelectedFile] = useState<VirtualFile | null>(files.length > 0 ? files[files.length - 1] : null);
+const WorkspaceViewer: React.FC<WorkspaceViewerProps> = ({ files, onUpdateFile, activePath, onSelectFile }) => {
+  // Derive selected file from activePath if provided, otherwise default logic (though activePath should be driven by parent now)
+  const selectedFile = React.useMemo(() => {
+      if (activePath) {
+          return files.find(f => f.path === activePath) || null;
+      }
+      return files.length > 0 ? files[files.length - 1] : null;
+  }, [files, activePath]);
+
   const [copied, setCopied] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
 
-  // Auto-select newest file if none selected and strictly no selection logic active
-  React.useEffect(() => {
-    if (!selectedFile && files.length > 0) {
-      setSelectedFile(files[files.length - 1]);
-    }
-  }, [files, selectedFile]);
-
   // Sync edit content when selected file changes
   React.useEffect(() => {
     if (selectedFile) {
       setEditContent(selectedFile.content);
+      setIsEditing(false); // Reset edit mode on file change
     }
   }, [selectedFile]);
 
   const handleSelectPath = (path: string) => {
-    const file = files.find(f => f.path === path);
-    if (file) {
-      setSelectedFile(file);
-      setIsEditing(false); // Exit edit mode when switching files
-    }
+      if (onSelectFile) {
+          onSelectFile(path);
+      }
   };
 
   const handleCopy = () => {

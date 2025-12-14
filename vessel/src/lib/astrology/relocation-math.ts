@@ -44,7 +44,7 @@ export function calculateGMST(date: Date): number {
 
     // Poly: 280.46061837 + 360.98564736629*D + ...
     // Simplified:
-    let gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T * T - (T * T * T) / 38710000;
+    const gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T * T - (T * T * T) / 38710000;
     return normalizeDegrees(gmst);
 }
 
@@ -97,7 +97,7 @@ export function calculateAscendant(lstDeg: number, lat: number): number {
     const y = Math.cos(ramc);
     const x = -(Math.sin(ramc) * Math.cos(eps)) - (Math.tan(phi) * Math.sin(eps));
 
-    let asc = toDeg(Math.atan2(y, x));
+    const asc = toDeg(Math.atan2(y, x));
     return normalizeDegrees(asc);
 }
 
@@ -160,8 +160,8 @@ export function calculatePlacidus(asc: number, mc: number, lat: number, lst: num
     // Houses 1 to 4 = Quadrant 1 (North-East)
 
     // Diff 10-1 (normalized)
-    let q4 = normalizeDegrees(houses[1] - houses[10]);
-    let q1 = normalizeDegrees(houses[4] - houses[1]);
+    const q4 = normalizeDegrees(houses[1] - houses[10]);
+    const q1 = normalizeDegrees(houses[4] - houses[1]);
 
     // 11 = 10 + q4/3
     houses[11] = normalizeDegrees(houses[10] + q4 / 3);
